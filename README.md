@@ -150,6 +150,25 @@ CGAL-dependent algorithms require a CGAL-enabled build. In a core build with
 CGAL disabled, the application still supports viewing, model IO, Easy3D-backed
 tools, AI Chat, AI generation import, and non-CGAL services.
 
+## Repository Layout
+
+- `src/app/`: UI, viewport, menus, dialogs, model tree, and user interaction.
+- `src/services/`: application services, background jobs, model operations,
+  runtime resources, AI service integration, and algorithm job facades.
+- `src/algorithms/`: backend algorithm implementations and Easy3D/CGAL visual
+  algorithm runners.
+- `src/io/`: file-format adapters and product-owned model IO helpers.
+- `src/common/`: lightweight shared contracts, IDs, DTOs, handles, and result
+  types used across layers.
+- `3rd_party/`: small bundled source dependencies that are built with the
+  product.
+- `3rd_party_overrides/`: narrow, version-specific compatibility overrides for
+  upstream headers. These are not complete third-party source trees.
+- `cmake/` and `CMakePresets.json`: project-local CMake helpers and documented
+  build presets.
+- `docs/media/readme/`: README feature-tour media only; these files are not
+  build inputs.
+
 ## Build Overview
 
 Easy3D is consumed as an external CMake package through
@@ -162,10 +181,8 @@ CGAL disabled:
 ```bash
 cmake --preset linux-gcc-cgal-off \
   -DEasy3D_DIR=<path-to-easy3d-install>/lib/CMake \
-  -DCLAW3D_EASY3D_RESOURCE_DIR=<path-to-easy3d-resources> \
-  -DCLAW3D_BUILD_TESTS=ON
+  -DCLAW3D_EASY3D_RESOURCE_DIR=<path-to-easy3d-resources>
 cmake --build --preset linux-gcc-cgal-off-release --parallel
-ctest --test-dir build/linux-gcc-cgal-off --output-on-failure
 ```
 
 See [BUILDING.md](BUILDING.md) for the full Windows, Ubuntu 22.04, and macOS

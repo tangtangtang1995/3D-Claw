@@ -65,6 +65,18 @@ repository. See `BUILDING.md` for the supported local layout and CMake variables
 | fast_obj | `3rd_party/fastobj/` | Fast OBJ parsing support. |
 | stb | `3rd_party/stb/` | Image loading utilities. |
 
+## Product Overrides
+
+`3rd_party_overrides/` contains small compatibility overrides that mirror
+selected upstream header paths. These files are kept separate from official
+third-party source trees so the product-specific patch surface remains visible
+and reviewable.
+
+When an override is derived from an upstream header, preserve the original
+license header and attribution. Treat the override as version-bound to the
+upstream dependency named in its path, and review it whenever that dependency is
+upgraded.
+
 ## Easy3D-Derived Application Components
 
 The application currently retains `src/app/ui/walk_through.cpp` and

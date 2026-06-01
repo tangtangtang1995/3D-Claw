@@ -78,6 +78,50 @@ Documentation media such as README GIFs may be committed under `docs/media/`.
 They are not build inputs and should be replaced sparingly because large binary
 history increases repository size.
 
+## Dependency Layout
+
+The public tree separates product code, small bundled source dependencies, and
+large external dependencies:
+
+- `3rd_party/` contains small source dependencies that are practical to build as
+  part of 3D Claw, such as Dear ImGui, GLFW, miniz, tinygltf, tinyobjloader,
+  fast_obj, stb, nlohmann/json, MD4C, imgui_md, cpp-httplib, and Eigen.
+- Easy3D, CGAL, Boost, GMP/MPFR, and OpenSSL are treated as external
+  dependencies because their build, binary, license, and platform constraints
+  are better handled through an install step, package manager, or explicit CMake
+  path.
+- `3rd_party_overrides/` contains product-owned compatibility overrides for a
+  small number of upstream headers. It is not a vendored copy of CGAL, Easy3D,
+  or Boost.
+- `docs/media/` contains documentation media only. It is not used by the build.
+
+This split is not based only on file size. It is a maintenance boundary: small
+header/source libraries may be bundled when that keeps builds predictable, while
+large platform-sensitive dependencies remain external and are documented through
+CMake variables.
+
+## Dependency Overrides
+
+`3rd_party_overrides/` exists for narrow, version-specific compatibility fixes
+required by 3D Claw's visual algorithm workflows. The directory mirrors upstream
+include paths so CMake can place the override include directory before the
+official dependency include directory.
+
+For CGAL-enabled builds, `3rd_party_overrides/cgal-6.1.1/include` is searched
+before the official CGAL 6.1.1 include path. This lets the product carry small,
+reviewable header-level fixes without editing the user's CGAL installation or
+turning the repository into a private CGAL fork.
+
+Override rules:
+
+- Keep overrides small and tied to the upstream version they patch.
+- Do not copy complete upstream source trees into `3rd_party_overrides/`.
+- Do not edit installed third-party headers directly.
+- When upgrading CGAL, review this directory first and remove overrides that are
+  no longer needed.
+- Preserve upstream license headers and document the dependency in
+  `THIRD_PARTY_NOTICES.md`.
+
 ## Build Modes
 
 ### Core Build, CGAL OFF
@@ -152,20 +196,18 @@ cmake -S _deps/Easy3D -B _deps/Easy3D-build -G Ninja \
 cmake --build _deps/Easy3D-build --target install --parallel
 ```
 
-Configure 3D Claw with CGAL disabled and tests enabled:
+Configure 3D Claw with CGAL disabled:
 
 ```bash
 cmake --preset linux-gcc-cgal-off \
   -DEasy3D_DIR=$PWD/_deps/Easy3D-install/lib/CMake \
-  -DCLAW3D_EASY3D_RESOURCE_DIR=$PWD/_deps/Easy3D-install/resources \
-  -DCLAW3D_BUILD_TESTS=ON
+  -DCLAW3D_EASY3D_RESOURCE_DIR=$PWD/_deps/Easy3D-install/resources
 ```
 
-Build and test:
+Build:
 
 ```bash
 cmake --build --preset linux-gcc-cgal-off-release --parallel
-ctest --test-dir build/linux-gcc-cgal-off --output-on-failure
 ```
 
 The executable is expected at:
@@ -202,15 +244,13 @@ Configure without CGAL:
 cmake --preset windows-msvc-cgal-off `
   -DEasy3D_DIR=<path-to-easy3d-install>/lib/CMake `
   -DCLAW3D_EASY3D_RESOURCE_DIR=<path-to-easy3d-resources> `
-  -DOPENSSL_ROOT_DIR=<path-to-openssl> `
-  -DCLAW3D_BUILD_TESTS=ON
+  -DOPENSSL_ROOT_DIR=<path-to-openssl>
 ```
 
-Build and test:
+Build:
 
 ```powershell
 cmake --build --preset windows-msvc-cgal-off-release --parallel
-ctest --test-dir build/windows-msvc-cgal-off -C Release --output-on-failure
 ```
 
 The executable is expected at:
@@ -256,11 +296,9 @@ cmake --build _deps/Easy3D-build --target install --parallel
 cmake --preset macos-clang-cgal-off \
   -DEasy3D_DIR=$PWD/_deps/Easy3D-install/lib/CMake \
   -DCLAW3D_EASY3D_RESOURCE_DIR=$PWD/_deps/Easy3D-install/resources \
-  -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) \
-  -DCLAW3D_BUILD_TESTS=ON
+  -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
 
 cmake --build --preset macos-clang-cgal-off-release --parallel
-ctest --test-dir build/macos-clang-cgal-off --output-on-failure
 ```
 
 macOS application bundle packaging is not yet defined. Treat this as a source
@@ -275,11 +313,9 @@ the `linux-gcc-cgal-on` preset:
 cmake --preset linux-gcc-cgal-on \
   -DEasy3D_DIR=$PWD/_deps/Easy3D-install/lib/CMake \
   -DCLAW3D_EASY3D_RESOURCE_DIR=$PWD/_deps/Easy3D-install/resources \
-  -DCLAW3D_CGAL_ALGO_CGAL_INCLUDE_DIR=$PWD/_deps/CGAL-6.1.1/include \
-  -DCLAW3D_BUILD_TESTS=ON
+  -DCLAW3D_CGAL_ALGO_CGAL_INCLUDE_DIR=$PWD/_deps/CGAL-6.1.1/include
 
 cmake --build --preset linux-gcc-cgal-on-release --parallel
-ctest --test-dir build/linux-gcc-cgal-on --output-on-failure
 ```
 
 The current CMake integration expects CGAL 6.1.1 headers in one of these local
@@ -429,13 +465,9 @@ sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev xorg-dev
 Start with `CLAW3D_ENABLE_CGAL=OFF`. After the core build passes, add CGAL 6.1.1
 and the Boost/GMP/MPFR variables described above.
 
-### Tests
+### Public Validation
 
-Tests are optional and controlled by:
-
-```bash
--DCLAW3D_BUILD_TESTS=ON
-```
-
-The current test suite includes a non-GUI archive extraction test that verifies
-valid ZIP import and path traversal rejection.
+The public source package does not include the internal automated test suite.
+For public builds, use CMake configure plus a complete build as the baseline
+validation path, then smoke-test the resulting executable with a small mesh and
+one AI-disabled algorithm panel.
