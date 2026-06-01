@@ -3,20 +3,23 @@
 This document describes how to build 3D Claw from the public source tree.
 
 The recommended first validation path on a new machine is the **core build with
-CGAL disabled**. That path builds the application, Easy3D-backed features, model
-IO, AI chat HTTPS code, AI 3D generation import, the bundled miniz ZIP backend,
-and the non-GUI service tests. The CGAL visual algorithm module can be enabled
-after the base build is green.
+[CGAL](https://www.cgal.org/) disabled**. That path builds the application,
+[Easy3D](https://github.com/LiangliangNan/Easy3D)-backed features, model IO, AI
+chat HTTPS code, AI 3D generation import, and the bundled
+[miniz](https://github.com/richgel999/miniz) ZIP backend. The CGAL visual
+algorithm module can be enabled after the base build is green.
 
 ## Recommended Build Order
 
 On a new machine, validate the project in this order:
 
-1. Build and install Easy3D 2.6.1 externally.
+1. Build and install [Easy3D 2.6.1](https://github.com/LiangliangNan/Easy3D)
+   externally.
 2. Configure 3D Claw with `CLAW3D_ENABLE_CGAL=OFF`.
-3. Build and run the non-GUI tests.
+3. Build the CGAL-OFF configuration.
 4. Smoke-test the executable with a small point cloud and a small mesh.
-5. Add CGAL 6.1.1, Boost, GMP, GMPXX, and MPFR.
+5. Add [CGAL 6.1.1](https://www.cgal.org/), [Boost](https://www.boost.org/),
+   [GMP](https://gmplib.org/), GMPXX, and [MPFR](https://www.mpfr.org/).
 6. Reconfigure with `CLAW3D_ENABLE_CGAL=ON`.
 7. Smoke-test one lightweight CGAL dialog before running heavier algorithms.
 
@@ -39,25 +42,27 @@ Ubuntu/macOS validation.
 
 Tracked bundled dependencies currently include:
 
-- Dear ImGui
-- GLFW
-- cpp-httplib
-- nlohmann/json
-- MD4C
-- imgui_md
-- miniz
-- tinygltf
-- tinyobjloader
-- fast_obj
-- stb
-- Eigen
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [GLFW](https://www.glfw.org/)
+- [cpp-httplib](https://github.com/yhirose/cpp-httplib)
+- [nlohmann/json](https://github.com/nlohmann/json)
+- [MD4C](https://github.com/mity/md4c)
+- [imgui_md](https://github.com/mekhontsev/imgui_md)
+- [miniz](https://github.com/richgel999/miniz)
+- [tinygltf](https://github.com/syoyo/tinygltf)
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
+- [fast_obj](https://github.com/thisistherk/fast_obj)
+- [stb](https://github.com/nothings/stb)
+- [Eigen](https://eigen.tuxfamily.org/)
 
 External dependencies are:
 
-- Easy3D 2.6.1
-- OpenSSL
-- CGAL 6.1.1 for `CLAW3D_ENABLE_CGAL=ON`
-- Boost, GMP, GMPXX, MPFR, and Eigen include paths used by CGAL workflows
+- [Easy3D 2.6.1](https://github.com/LiangliangNan/Easy3D)
+- [OpenSSL](https://www.openssl.org/)
+- [CGAL 6.1.1](https://www.cgal.org/) for `CLAW3D_ENABLE_CGAL=ON`
+- [Boost](https://www.boost.org/), [GMP](https://gmplib.org/), GMPXX,
+  [MPFR](https://www.mpfr.org/), and [Eigen](https://eigen.tuxfamily.org/)
+  include paths used by CGAL workflows
 
 The following local dependency directories are intentionally ignored by Git:
 
@@ -145,7 +150,7 @@ This is the final full-feature target:
 ```
 
 It requires the CGAL dependency layout described below. On a fresh Ubuntu host,
-start with CGAL OFF first; then enable CGAL after the base build and tests pass.
+start with CGAL OFF first; then enable CGAL after the base build passes.
 
 ## Ubuntu 22.04 Core Build
 
@@ -175,7 +180,7 @@ git clone <your-3d-claw-repository-url> 3D-Claw
 cd 3D-Claw
 ```
 
-Build and install Easy3D 2.6.1 into a local ignored directory:
+Build and install [Easy3D 2.6.1](https://github.com/LiangliangNan/Easy3D) into a local ignored directory:
 
 ```bash
 git clone --depth 1 --branch v2.6.1 \
@@ -222,7 +227,8 @@ Run it from a graphical desktop session:
 ./build/linux-gcc-cgal-off/bin/3DClaw
 ```
 
-If CMake cannot find OpenSSL on your Linux distribution, pass an explicit root
+If CMake cannot find [OpenSSL](https://www.openssl.org/) on your Linux
+distribution, pass an explicit root
 or rely on the package paths from `libssl-dev`:
 
 ```bash
@@ -277,7 +283,7 @@ brew update
 brew install cmake ninja openssl@3
 ```
 
-Build Easy3D, then configure 3D Claw with CGAL disabled:
+Build [Easy3D](https://github.com/LiangliangNan/Easy3D), then configure 3D Claw with CGAL disabled:
 
 ```bash
 git clone --depth 1 --branch v2.6.1 \
@@ -306,7 +312,7 @@ build and smoke-test workflow.
 
 ## Enabling CGAL Visual Algorithms
 
-CGAL is not required for the core build. The public full-feature Linux build is
+[CGAL](https://www.cgal.org/) is not required for the core build. The public full-feature Linux build is
 the `linux-gcc-cgal-on` preset:
 
 ```bash
@@ -355,7 +361,7 @@ The CMake checks support those directories separately.
 
 Ubuntu 22.04 package repositories may not provide CGAL 6.1.1. Do not assume
 `apt install libcgal-dev` gives the exact version expected by this project.
-Use the official CGAL 6.1.1 source/header release when validating full-feature
+Use the official [CGAL 6.1.1](https://www.cgal.org/) source/header release when validating full-feature
 parity.
 
 ## Runtime Resources and User Files

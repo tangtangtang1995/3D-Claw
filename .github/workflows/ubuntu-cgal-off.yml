@@ -1,4 +1,4 @@
-name: Ubuntu CGAL-OFF Build
+name: Linux build
 
 on:
   push:

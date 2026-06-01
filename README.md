@@ -3,13 +3,16 @@
 <p>
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-blue">
   <img alt="CMake" src="https://img.shields.io/badge/build-CMake-informational">
+  <a href="https://github.com/tangtangtang1995/3D-Claw/actions/workflows/ubuntu-cgal-off.yml">
+    <img alt="Linux build" src="https://github.com/tangtangtang1995/3D-Claw/actions/workflows/ubuntu-cgal-off.yml/badge.svg?branch=main">
+  </a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey">
   <img alt="Easy3D" src="https://img.shields.io/badge/built%20on-Easy3D-6f42c1">
   <img alt="CGAL optional" src="https://img.shields.io/badge/CGAL-optional-success">
   <img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-blue">
 </p>
 
-**3D Claw: An AI-assisted 3D geometry processing workspace built on Easy3D.**
+**3D Claw: An AI-assisted 3D geometry processing workspace built on [Easy3D](https://github.com/LiangliangNan/Easy3D).**
 
 3D Claw is a desktop workspace for inspecting, processing, generating, and
 evaluating 3D geometry. It uses Easy3D as the geometry, rendering, file IO, and
@@ -33,7 +36,7 @@ instead of building from source:
 - `3DClaw-v0.1.0-linux-x86_64.tar.gz`: extract the archive and run
   `./3DClaw.sh` from the extracted folder.
 
-These packages are CGAL-enabled release builds and include the non-standard
+These packages are [CGAL](https://www.cgal.org/)-enabled release builds and include the non-standard
 runtime libraries and Easy3D resources needed for normal use. Building from
 source is still recommended for development, debugging, or adapting dependency
 versions.
@@ -111,7 +114,7 @@ inspectable instead of being a silent black box.
 - AI Chat with current model and panel context.
 - Text/image-to-3D generation with automatic import into the workspace.
 - Live visual feedback for long-running geometry algorithms.
-- Dockable Dear ImGui interface with model tree, properties, health report,
+- Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface with model tree, properties, health report,
   log, history, selection, measurement, crop, transform, and display tools.
 - Textured OBJ and GLB loading support.
 - CGAL-backed visual algorithms including Region Growing, RANSAC, Alpha
@@ -210,19 +213,31 @@ build guide, including CGAL-on configuration.
 
 ## Third-Party Foundations
 
-3D Claw is built with Easy3D, CGAL, Dear ImGui, GLFW, cpp-httplib, miniz,
-tinygltf, tinyobjloader, fast_obj, Eigen, OpenSSL, and related open-source
-components. Some small source dependencies are bundled under `3rd_party/`;
-large standard dependencies such as Easy3D, CGAL, Boost, GMP/MPFR, and OpenSSL
-are expected to be installed or provided externally.
+3D Claw uses a small bundled dependency set plus larger external geometry and
+platform libraries:
+
+- Geometry and visualization foundations: [Easy3D](https://github.com/LiangliangNan/Easy3D),
+  [CGAL](https://www.cgal.org/), and [Eigen](https://eigen.tuxfamily.org/).
+- UI, networking, and runtime support: [Dear ImGui](https://github.com/ocornut/imgui),
+  [GLFW](https://www.glfw.org/), [cpp-httplib](https://github.com/yhirose/cpp-httplib),
+  [OpenSSL](https://www.openssl.org/), and [miniz](https://github.com/richgel999/miniz).
+- Model IO helpers: [tinygltf](https://github.com/syoyo/tinygltf),
+  [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader),
+  [fast_obj](https://github.com/thisistherk/fast_obj), and [stb](https://github.com/nothings/stb).
+- Large external numeric dependencies for CGAL-enabled builds include
+  [Boost](https://www.boost.org/), [GMP](https://gmplib.org/), and [MPFR](https://www.mpfr.org/).
+
+Some small source dependencies are bundled under `3rd_party/`; large standard
+dependencies are expected to be installed or provided externally.
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
 
 ## Acknowledgements
 
-3D Claw is built on Easy3D and uses CGAL for many geometry processing
-workflows. It also depends on Dear ImGui, GLFW, cpp-httplib, miniz, tinygltf,
-tinyobjloader, fast_obj, Eigen, OpenSSL, and other open-source components.
+3D Claw is built on [Easy3D](https://github.com/LiangliangNan/Easy3D) and uses
+[CGAL](https://www.cgal.org/) for many geometry processing workflows. The UI,
+networking, archive, and model IO stack also relies on the open-source
+components listed in [Third-Party Notices](THIRD_PARTY_NOTICES.md).
 
 We thank the Easy3D, CGAL, and broader open-source graphics and geometry
 communities for the foundations that make this work possible.

@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-3D Claw is built on top of Easy3D and several third-party open-source
+3D Claw is built on top of [Easy3D](https://github.com/LiangliangNan/Easy3D) and several third-party open-source
 components. This file is a practical attribution index for the public source
 package. The authoritative license text for each bundled component remains in
 that component's own directory. External dependencies are obtained separately by
@@ -18,7 +18,7 @@ dependencies.
 | Category | Policy |
 | --- | --- |
 | Bundled source dependencies | Small product dependencies tracked under `3rd_party/` with their own license files. |
-| External dependencies | Large or standard platform packages, such as Easy3D, CGAL, Boost, GMP/MPFR, and OpenSSL, provided by the user or package manager. |
+| External dependencies | Large or standard platform packages, such as [Easy3D](https://github.com/LiangliangNan/Easy3D), [CGAL](https://www.cgal.org/), [Boost](https://www.boost.org/), [GMP](https://gmplib.org/)/[MPFR](https://www.mpfr.org/), and [OpenSSL](https://www.openssl.org/), provided by the user or package manager. |
 | Product overrides | Compatibility overrides under `3rd_party_overrides/`, kept separate from upstream source trees. |
 
 Local ignored folders may exist during development, for example local CGAL,
@@ -29,7 +29,7 @@ not make them part of the public bundled source package.
 
 | Component | Location | Role |
 |-----------|----------|------|
-| Eigen | `3rd_party/eigen/` | Linear algebra dependency used by the product and CGAL runners. |
+| [Eigen](https://eigen.tuxfamily.org/) | `3rd_party/eigen/` | Linear algebra dependency used by the product and CGAL runners. |
 
 ## External Geometry/Numeric Dependencies
 
@@ -38,32 +38,32 @@ repository. See `BUILDING.md` for the supported local layout and CMake variables
 
 | Component | Expected by CMake | Role |
 |-----------|-------------------|------|
-| Easy3D 2.6.1 | `Easy3D_DIR` or `CMAKE_PREFIX_PATH` | Core geometry types, file IO, renderer, viewer, utilities. |
-| CGAL 6.1.1 | `CLAW3D_CGAL_ALGO_CGAL_INCLUDE_DIR` | Geometry algorithms used by the visual CGAL runners. |
-| Boost headers | `CLAW3D_CGAL_ALGO_BOOST_INCLUDE_DIR` | Header dependencies used by CGAL workflows. |
-| GMP / MPFR | `CLAW3D_CGAL_ALGO_GMP_INCLUDE_DIR`, `CLAW3D_CGAL_ALGO_GMP_LIBRARY`, `CLAW3D_CGAL_ALGO_GMPXX_LIBRARY`, `CLAW3D_CGAL_ALGO_MPFR_LIBRARY` | Numeric dependencies used by CGAL workflows. |
-| OpenSSL | `OPENSSL_ROOT_DIR` | TLS backend for cpp-httplib. |
+| [Easy3D 2.6.1](https://github.com/LiangliangNan/Easy3D) | `Easy3D_DIR` or `CMAKE_PREFIX_PATH` | Core geometry types, file IO, renderer, viewer, utilities. |
+| [CGAL 6.1.1](https://www.cgal.org/) | `CLAW3D_CGAL_ALGO_CGAL_INCLUDE_DIR` | Geometry algorithms used by the visual CGAL runners. |
+| [Boost headers](https://www.boost.org/) | `CLAW3D_CGAL_ALGO_BOOST_INCLUDE_DIR` | Header dependencies used by CGAL workflows. |
+| [GMP](https://gmplib.org/) / [MPFR](https://www.mpfr.org/) | `CLAW3D_CGAL_ALGO_GMP_INCLUDE_DIR`, `CLAW3D_CGAL_ALGO_GMP_LIBRARY`, `CLAW3D_CGAL_ALGO_GMPXX_LIBRARY`, `CLAW3D_CGAL_ALGO_MPFR_LIBRARY` | Numeric dependencies used by CGAL workflows. |
+| [OpenSSL](https://www.openssl.org/) | `OPENSSL_ROOT_DIR` | TLS backend for cpp-httplib. |
 
 ## UI and Runtime
 
 | Component | Location | Role |
 |-----------|----------|------|
-| Dear ImGui | `3rd_party/imgui/` | Immediate-mode desktop UI. |
-| GLFW | `3rd_party/glfw/` | Windowing and input backend. |
-| cpp-httplib | `3rd_party/httplib/` | HTTPS client used by AI chat and 3D generation services. |
-| nlohmann/json | `3rd_party/json/` | JSON parsing and serialization. |
-| MD4C | `3rd_party/md4c/` | Markdown (CommonMark/GFM) parser used to render AI chat replies. |
-| imgui_md | `3rd_party/imgui_md/` | Dear ImGui renderer bridge that draws MD4C output in the AI chat panel. |
-| miniz | `3rd_party/miniz/` | Cross-platform ZIP archive extraction for AI 3D generation downloads. |
+| [Dear ImGui](https://github.com/ocornut/imgui) | `3rd_party/imgui/` | Immediate-mode desktop UI. |
+| [GLFW](https://www.glfw.org/) | `3rd_party/glfw/` | Windowing and input backend. |
+| [cpp-httplib](https://github.com/yhirose/cpp-httplib) | `3rd_party/httplib/` | HTTPS client used by AI chat and 3D generation services. |
+| [nlohmann/json](https://github.com/nlohmann/json) | `3rd_party/json/` | JSON parsing and serialization. |
+| [MD4C](https://github.com/mity/md4c) | `3rd_party/md4c/` | Markdown (CommonMark/GFM) parser used to render AI chat replies. |
+| [imgui_md](https://github.com/mekhontsev/imgui_md) | `3rd_party/imgui_md/` | Dear ImGui renderer bridge that draws MD4C output in the AI chat panel. |
+| [miniz](https://github.com/richgel999/miniz) | `3rd_party/miniz/` | Cross-platform ZIP archive extraction for AI 3D generation downloads. |
 
 ## Model IO and Geometry Utilities
 
 | Component | Location | Role |
 |-----------|----------|------|
-| tinygltf | `3rd_party/tinygltf/` | GLB/GLTF loading support. |
-| tinyobjloader | `3rd_party/tinyobjloader/` | OBJ parsing support. |
-| fast_obj | `3rd_party/fastobj/` | Fast OBJ parsing support. |
-| stb | `3rd_party/stb/` | Image loading utilities. |
+| [tinygltf](https://github.com/syoyo/tinygltf) | `3rd_party/tinygltf/` | GLB/GLTF loading support. |
+| [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) | `3rd_party/tinyobjloader/` | OBJ parsing support. |
+| [fast_obj](https://github.com/thisistherk/fast_obj) | `3rd_party/fastobj/` | Fast OBJ parsing support. |
+| [stb](https://github.com/nothings/stb) | `3rd_party/stb/` | Image loading utilities. |
 
 ## Product Overrides
 
