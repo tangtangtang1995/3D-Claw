@@ -1,0 +1,7 @@
+Eigen is primarily distributed under the Mozilla Public License 2.0.
+
+Individual headers in this directory carry their own license notices; those
+notices are authoritative for each file. The MPL-2.0 text is available from:
+
+https://www.mozilla.org/MPL/2.0/
+

@@ -1,0 +1,44 @@
+# Build trees and generated CMake files
+build*/
+cmake-build*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+Testing/
+
+# Compiled binaries and libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# Generated IDE project files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.user
+
+# Local runtime state
+*.ini
+*.log
+3DClaw_config.json
+generated_models/
+
+# External dependency checkouts and local installs
+_deps/
+3rd_party/CGAL*/
+3rd_party/boost*/
+3rd_party/gmp*/
+
+# Editor, OS, and user-local files
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db

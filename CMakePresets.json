@@ -1,0 +1,110 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CLAW3D_ENABLE_LAYERING_CHECK": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-cgal-on",
+      "displayName": "Windows default MSVC generator, CGAL ON",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CLAW3D_ENABLE_CGAL": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-cgal-off",
+      "displayName": "Windows default MSVC generator, CGAL OFF",
+      "inherits": "windows-msvc-cgal-on",
+      "cacheVariables": {
+        "CLAW3D_ENABLE_CGAL": "OFF"
+      }
+    },
+    {
+      "name": "linux-gcc-cgal-off",
+      "displayName": "Linux GCC Release, CGAL OFF",
+      "inherits": "base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CLAW3D_ENABLE_CGAL": "OFF"
+      }
+    },
+    {
+      "name": "linux-gcc-cgal-on",
+      "displayName": "Linux GCC Release, CGAL ON",
+      "inherits": "base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CLAW3D_ENABLE_CGAL": "ON"
+      }
+    },
+    {
+      "name": "macos-clang-cgal-off",
+      "displayName": "macOS Clang Release, CGAL OFF",
+      "inherits": "base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CLAW3D_ENABLE_CGAL": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-cgal-on-release",
+      "configurePreset": "windows-msvc-cgal-on",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-msvc-cgal-off-release",
+      "configurePreset": "windows-msvc-cgal-off",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux-gcc-cgal-off-release",
+      "configurePreset": "linux-gcc-cgal-off"
+    },
+    {
+      "name": "linux-gcc-cgal-on-release",
+      "configurePreset": "linux-gcc-cgal-on"
+    },
+    {
+      "name": "macos-clang-cgal-off-release",
+      "configurePreset": "macos-clang-cgal-off"
+    }
+  ]
+}

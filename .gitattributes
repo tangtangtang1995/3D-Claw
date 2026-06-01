@@ -1,0 +1,58 @@
+# Auto-detect text files while keeping common generated and binary assets safe.
+* text=auto
+
+# Source and project files.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.editorconfig text eol=lf
+.clang-format text eol=lf
+.clang-tidy text eol=lf
+*.c      text eol=lf
+*.cc     text eol=lf
+*.cpp    text eol=lf
+*.cxx    text eol=lf
+*.h      text eol=lf
+*.hpp    text eol=lf
+*.hxx    text eol=lf
+*.cmake  text eol=lf
+CMakeLists.txt text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.json   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+
+# Windows scripts.
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.ps1    text eol=crlf
+
+# Binary assets and build outputs.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.ttf    binary
+*.otf    binary
+*.zip    binary
+*.7z     binary
+*.gz     binary
+*.dll    binary
+*.exe    binary
+*.lib    binary
+*.pdb    binary
+
+# 3D assets are often binary or large; avoid line-ending normalization.
+*.ply    binary
+*.obj    binary
+*.stl    binary
+*.glb    binary
+*.fbx    binary
+
+# Internal local notes should not appear in source archives.
+local_notes/ export-ignore
+*_local.md export-ignore
+build*/ export-ignore
+_deps/ export-ignore
+generated_models/ export-ignore

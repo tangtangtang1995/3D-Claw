@@ -1,0 +1,30 @@
+set(CLAW3D_CGAL_ALGORITHM_HEADERS
+    include/acvd_runner.h
+    include/alpha_wrap_runner.h
+    include/arap_deformation_runner.h
+    include/claw3d_cgal_algo_export.h
+    include/geodesic_cgal_runner.h
+    include/mcf_skeletonization_runner.h
+    include/parameterization_runner.h
+    include/planar_patch_remeshing_runner.h
+    include/ransac_runner.h
+    include/region_growing_runner.h
+    include/simplification_runner.h
+    include/smoothing_runner.h
+    include/vsa_runner.h
+)
+
+set(CLAW3D_CGAL_ALGORITHM_SOURCES
+    src/acvd_runner.cpp
+    src/alpha_wrap_runner.cpp
+    src/arap_deformation_runner.cpp
+    src/geodesic_cgal_runner.cpp
+    src/mcf_skeletonization_runner.cpp
+    src/parameterization_runner.cpp
+    src/planar_patch_remeshing_runner.cpp
+    src/ransac_runner.cpp
+    src/region_growing_runner.cpp
+    src/simplification_runner.cpp
+    src/smoothing_runner.cpp
+    src/vsa_runner.cpp
+)
