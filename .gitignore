@@ -42,3 +42,14 @@ _deps/
 .vscode/
 .DS_Store
 Thumbs.db
+# Local archives and public-export scratch files
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Internal test/tooling folders are kept out of the public source export
+test/
+tests/
+tool/
+tools/

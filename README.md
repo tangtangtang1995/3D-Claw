@@ -23,6 +23,21 @@ processing operation. It can help choose parameters from the current model
 context, the application can expose visual intermediate states, and AI can
 evaluate result metrics after an algorithm finishes.
 
+## Prebuilt Binaries
+
+For a quick trial, download the prebuilt packages from the GitHub Releases page
+instead of building from source:
+
+- `3DClaw-v0.1.0-windows-x86_64.zip`: extract the archive and run
+  `3DClaw.exe` from the extracted folder.
+- `3DClaw-v0.1.0-linux-x86_64.tar.gz`: extract the archive and run
+  `./3DClaw.sh` from the extracted folder.
+
+These packages are CGAL-enabled release builds and include the non-standard
+runtime libraries and Easy3D resources needed for normal use. Building from
+source is still recommended for development, debugging, or adapting dependency
+versions.
+
 ## Feature Tour
 
 ### AI-Assisted 3D Generation
