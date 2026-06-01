@@ -1,0 +1,59 @@
+name: Ubuntu CGAL-OFF Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ubuntu-cgal-off-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Ubuntu 22.04 / CGAL OFF
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout 3D Claw
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            cmake \
+            ninja-build \
+            build-essential \
+            python3 \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libssl-dev \
+            xorg-dev
+
+      - name: Build and install Easy3D 2.6.1
+        run: |
+          git clone --depth 1 --branch v2.6.1 \
+            https://github.com/LiangliangNan/Easy3D.git _deps/Easy3D
+          test -e _deps/Easy3D/ReadMe.md || ln -s README.md _deps/Easy3D/ReadMe.md
+          cmake -S _deps/Easy3D -B _deps/Easy3D-build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX=$PWD/_deps/Easy3D-install \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DEasy3D_BUILD_APPLICATIONS=OFF \
+            -DEasy3D_BUILD_EXAMPLES=OFF \
+            -DEasy3D_BUILD_TESTS=OFF \
+            -DEasy3D_BUILD_TUTORIALS=OFF
+          cmake --build _deps/Easy3D-build --target install --parallel
+
+      - name: Configure 3D Claw with CGAL disabled
+        run: |
+          cmake --preset linux-gcc-cgal-off \
+            -DEasy3D_DIR=$PWD/_deps/Easy3D-install/lib/CMake \
+            -DCLAW3D_EASY3D_RESOURCE_DIR=$PWD/_deps/Easy3D-install/resources
+
+      - name: Build 3D Claw
+        run: cmake --build --preset linux-gcc-cgal-off-release --parallel
