@@ -12,8 +12,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "17",
-        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
-        "CLAW3D_ENABLE_LAYERING_CHECK": "OFF"
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
       }
     },
     {

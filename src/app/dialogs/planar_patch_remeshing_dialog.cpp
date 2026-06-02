@@ -11,9 +11,11 @@
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/planar_patch_remeshing_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
@@ -28,7 +30,6 @@
 #include <easy3d/renderer/state.h>
 #include <easy3d/util/logging.h>
 
-#include <GLFW/glfw3.h>
 #include "imgui.h"
 
 #include <cstdio>
@@ -349,7 +350,9 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                     open = true;
                     s.close_requested = true;
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
 
                 if (busy) {
@@ -386,15 +389,15 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                                 s.last_overlay_display_time);
                             s.last_displayed_phase = snap.phase;
                             if (!snap.face_patch_ids.empty())
-                                win->update_ppr_patch_overlay(snap.face_patch_ids);
+                                win->overlays().update_ppr_patch_overlay(snap.face_patch_ids);
                             if (!snap.constrained_edge_endpoints.empty())
-                                win->update_ppr_constraint_overlay(
+                                win->overlays().update_ppr_constraint_overlay(
                                     snap.constrained_edge_endpoints);
                             if (!snap.corner_points.empty())
-                                win->update_ppr_corner_overlay(snap.corner_points);
+                                win->overlays().update_ppr_corner_overlay(snap.corner_points);
                         }
                     }
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 }
 
                 if (s.runner && s.runner.is_done() &&
@@ -415,20 +418,24 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                         s.settle_ms <= 0.0;
 
                     if (pending_live_snapshots) {
+                        if (win)
+                            win->algorithm_controller().mark_preview_flushing();
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Playing live preview...");
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else if (finish_immediately) {
                         if (s.live_preview && win)
-                            win->clear_ppr_overlay();
+                            win->overlays().clear_ppr_overlay();
                         s.runner.copy_error_if_any(s.last_error);
                         mark_algorithm_done(win);
                         s.runner.reset();
                         s.settling = false;
                         s.close_requested = false;
                         if (close_after) open = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else if (!s.settling) {
+                        if (win)
+                            win->algorithm_controller().mark_final_preview_holding();
                         s.settling = true;
                         s.settle_started_at = ImGui::GetTime();
                         ImGui::TextColored(claw_ui::status_success_color(),
@@ -438,12 +445,12 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                         const double now = ImGui::GetTime();
                         const double elapsed = (now - s.settle_started_at) * 1000.0;
                         if (elapsed >= s.settle_ms) {
-                            if (win) win->clear_ppr_overlay();
+                            if (win) win->overlays().clear_ppr_overlay();
                             mark_algorithm_done(win);
                             s.runner.reset();
                             s.settling = false;
                             s.close_requested = false;
-                            glfwPostEmptyEvent();
+                            claw3d::app::wake_event_loop();
                         } else {
                             ImGui::TextColored(claw_ui::status_success_color(),
                                 "Done. Holding overlay %.1fs / %.1fs ...",
@@ -513,7 +520,7 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                             s.close_requested = false;
 
                             if (s.live_preview && win)
-                                win->init_ppr_overlay(mesh);
+                                win->overlays().init_ppr_overlay(mesh);
 
                             claw3d::services::PlanarPatchRemeshingJobStart request;
                             request.source_mesh = mesh;
@@ -526,7 +533,7 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                             request.source_name = mesh->name();
                             request.final_result_ready =
                                 &s.final_result_ready;
-                            request.wake_ui = []() { glfwPostEmptyEvent(); };
+                            request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                             if (win) {
                                 s.runner = claw3d::services::
@@ -537,7 +544,7 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                             }
                             if (!s.runner) {
                                 if (s.live_preview && win)
-                                    win->clear_ppr_overlay();
+                                    win->overlays().clear_ppr_overlay();
                                 s.final_result_ready.store(true,
                                     std::memory_order_release);
                                 s.last_error =
@@ -573,7 +580,9 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                         if (s.runner) {
                             s.runner.cancel();
                             if (win)
-                                win->clear_ppr_overlay();
+                                win->algorithm_controller().request_cancel();
+                            if (win)
+                                win->overlays().clear_ppr_overlay();
                             s.settling = false;
                             s.close_requested = false;
                             s.last_overlay_display_time = 0.0;
@@ -582,7 +591,7 @@ void renderDialogPlanarPatchRemeshing(ViewportCanvas* viewer, PPRState& s, bool&
                                 mark_algorithm_done(win);
                                 s.last_stats_valid = false;
                             }
-                            glfwPostEmptyEvent();
+                            claw3d::app::wake_event_loop();
                         }
                     }
                 }

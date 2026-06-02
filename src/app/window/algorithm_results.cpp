@@ -6,9 +6,10 @@
 // under the GNU General Public License v3. See the root LICENSE file.
 
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 
 #include "window/window_helpers.h"
-#include "model/operation_history.h"
+#include "history/operation_history.h"
 
 #include <easy3d/core/graph.h>
 #include <easy3d/core/point_cloud.h>
@@ -490,7 +491,7 @@ void MainWindow::process_algorithm_completion() {
     viewer_.mark_dirty();
 
     if (batch.id == AlgorithmId::AlphaWrap3D && st_alpha_wrap_.live_clear_on_finish)
-        reset_aw3_process_overlay();
+        overlays().reset_aw3_process_overlay();
 
     if (added_count > 0) {
         const bool replace_fallback =

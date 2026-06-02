@@ -12,6 +12,7 @@
 
 #include "window/main_window.h"
 #include "menus/ai_menu_utils.h"
+#include "overlays/overlay_controller.h"
 
 #include <easy3d/util/logging.h>
 
@@ -176,12 +177,10 @@ void MainWindow::render_menu_select() {
             ImGui::SetTooltip("Permanently remove selected elements from the current\n"
                               "model. A confirmation dialog will be shown.");
         ImGui::Separator();
+        bool show_selection_overlay = overlays().selection_visible();
         if (ImGui::MenuItem("Show Selection Overlay", nullptr,
-                            &interaction_overlay_.selection_visible)) {
-            if (!interaction_overlay_.selection_visible)
-                clear_selection_overlays();
-            else
-                selection_revision_ = -1;
+                            &show_selection_overlay)) {
+            overlays().set_selection_visible(show_selection_overlay);
         }
         ImGui::EndMenu();
     }

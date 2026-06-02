@@ -8,6 +8,7 @@
 #include "dialogs/basic_dialogs.h"
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
+#include "platform/window_events.h"
 #include "services/jobs/easy3d/easy3d_surface_mesh_jobs.h"
 #include "ui/layout_helpers.h"
 #include "ui/status_widgets.h"
@@ -17,8 +18,6 @@
 #include <easy3d/core/surface_mesh.h>
 #include <easy3d/renderer/renderer.h>
 #include <easy3d/util/logging.h>
-
-#include <GLFW/glfw3.h>
 
 namespace {
 
@@ -100,7 +99,7 @@ void renderDialogSurfaceMeshSampling(ViewportCanvas* viewer, SurfaceMeshSampling
                         : ModelHandle{};
                 request.target_points = np;
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_sampling_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh sampling";
@@ -136,7 +135,7 @@ void renderDialogSurfaceMeshSimplification(ViewportCanvas* viewer, SurfaceMeshSi
                         : ModelHandle{};
                 request.target_vertices = s.target_vertices;
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_simplification_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh simplification";
@@ -176,7 +175,7 @@ void renderDialogSurfaceMeshSmoothing(ViewportCanvas* viewer, SurfaceMeshSmoothi
                 request.iterations = s.iterations;
                 request.uniform_laplace = s.uniform;
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_smoothing_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh smoothing";
@@ -212,7 +211,7 @@ void renderDialogSurfaceMeshFairing(ViewportCanvas* viewer, SurfaceMeshFairingSt
                         : ModelHandle{};
                 request.criterion = s.criterion;
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_fairing_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh fairing";
@@ -246,7 +245,7 @@ void renderDialogSurfaceMeshHoleFilling(ViewportCanvas* viewer, SurfaceMeshHoleF
                         ? win->viewer()->model_handle(mesh)
                         : ModelHandle{};
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_hole_filling_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh hole filling";
@@ -310,7 +309,7 @@ void renderDialogSurfaceMeshRemeshing(ViewportCanvas* viewer, SurfaceMeshRemeshi
                 request.edge_length = s.edge_length;
                 request.use_features = s.use_features;
                 request.source_name = mesh->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_surface_mesh_remeshing_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start surface mesh remeshing";

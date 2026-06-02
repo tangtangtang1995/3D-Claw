@@ -7,7 +7,7 @@
 
 // RANSAC live-preview overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -23,7 +23,7 @@
 
 #include <cmath>
 
-void MainWindow::update_ransac_samples_overlay(const double pts[3][3]) {
+void OverlayController::update_ransac_samples_overlay(const double pts[3][3]) {
     if (!model_is_live(viewer_, algorithm_overlay_.ransac_samples))
         algorithm_overlay_.ransac_samples = nullptr;
 
@@ -69,7 +69,7 @@ void MainWindow::update_ransac_samples_overlay(const double pts[3][3]) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_ransac_candidate_overlay(
+void OverlayController::update_ransac_candidate_overlay(
     const double plane_eq[4], const double sample_pts[3][3], float bbox_diag)
 {
     if (!model_is_live(viewer_, algorithm_overlay_.ransac_candidate))
@@ -145,7 +145,7 @@ void MainWindow::update_ransac_candidate_overlay(
 }
 
 // Must only be called from the main thread after the running flag is false.
-void MainWindow::clear_ransac_live_overlays() {
+void OverlayController::clear_ransac_live_overlays() {
     auto* saved_current = viewer_.current_model();
     delete_model_if_live(viewer_, algorithm_overlay_.ransac_samples);
     delete_model_if_live(viewer_, algorithm_overlay_.ransac_candidate);

@@ -8,7 +8,7 @@
 // Delete selected elements from the current model.
 
 #include "window/main_window.h"
-#include "model/model_health.h"
+#include <model_health.h>
 #include "viewport/viewport_canvas.h"
 #include "selection/selection_manager.h"
 

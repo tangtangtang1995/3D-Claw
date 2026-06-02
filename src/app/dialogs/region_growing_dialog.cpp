@@ -9,9 +9,11 @@
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "common/primitive_preview_policy.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/region_growing_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
@@ -26,7 +28,6 @@
 #include <limits>
 #include <sstream>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 // =============================================================================
 // Region Growing help prompt
@@ -130,11 +131,13 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
             open = true;
             s.close_requested = true;
             s.runner.cancel();
+            if (win)
+                win->algorithm_controller().request_cancel();
             s.current_region_pending_idx.clear();
             s.pending_cmds.clear();
             if (win)
-                win->clear_rg_overlays();
-            glfwPostEmptyEvent();
+                win->overlays().clear_rg_overlays();
+            claw3d::app::wake_event_loop();
         }
 
         easy3d::PointCloud* cloud = nullptr;
@@ -360,12 +363,17 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
                 live_cmds.resize(RG_PER_FRAME);
             }
             if (win && !live_cmds.empty())
-                win->update_rg_overlay(live_cmds);
+                win->overlays().update_rg_overlay(live_cmds);
 
             if (s.runner.is_done() && this_busy
                 && !s.final_results_ready.load(std::memory_order_acquire)) {
                 ImGui::TextColored(claw_ui::status_warning_color(),
                     "Finalizing result meshes...");
+            }
+            if (s.runner.is_done() && this_busy && !s.pending_cmds.empty()
+                && s.final_results_ready.load(std::memory_order_acquire)
+                && win) {
+                win->algorithm_controller().mark_preview_flushing();
             }
 
             // Once runner is done, all live color commands are flushed, and
@@ -390,7 +398,7 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
         // --- Buttons ---
         if (!busy) {
             if (ImGui::Button("Detect Regions")) {
-                if (win) win->clear_rg_overlays();
+                if (win) win->overlays().clear_rg_overlays();
                 int n_pts2 = cloud->n_vertices();
 
                 // Auto defaults below should match the sentinel-fill block
@@ -424,7 +432,7 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
                 s.close_requested = false;
                 s.final_results_ready.store(false, std::memory_order_release);
 
-                if (s.live_preview && win) win->init_rg_overlay(cloud);
+                if (s.live_preview && win) win->overlays().init_rg_overlay(cloud);
 
                 claw3d::services::RegionGrowingJobStart request;
                 request.source_cloud = cloud;
@@ -434,7 +442,7 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
                         : ModelHandle{};
                 request.config = cfg;
                 request.final_result_ready = &s.final_results_ready;
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                 if (win) {
                     s.runner = claw3d::services::start_region_growing_job(
@@ -444,7 +452,7 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
                 }
                 if (!s.runner) {
                     if (s.live_preview && win)
-                        win->clear_rg_overlays();
+                        win->overlays().clear_rg_overlays();
                     s.final_results_ready.store(true,
                         std::memory_order_release);
                     LOG(WARNING) << "Failed to start Region Growing job";
@@ -501,9 +509,11 @@ void renderDialogRegionGrowing(ViewportCanvas* viewer, RegionGrowingState& s, bo
                 claw_ui::same_line_if_fits_button("Cancel");
                 if (ImGui::Button("Cancel")) {
                     s.runner.cancel();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
                     s.current_region_pending_idx.clear();
                     s.pending_cmds.clear();
-                    if (win) win->clear_rg_overlays();
+                    if (win) win->overlays().clear_rg_overlays();
                 }
             }
         }

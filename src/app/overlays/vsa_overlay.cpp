@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-void MainWindow::init_vsa_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_vsa_overlay(easy3d::SurfaceMesh* src) {
     clear_vsa_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.vsa;
@@ -68,7 +68,7 @@ void MainWindow::init_vsa_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_vsa_cluster_overlay(
+void OverlayController::update_vsa_cluster_overlay(
     const std::vector<int>& face_proxy_ids)
 {
     auto& state = algorithm_overlay_.vsa;
@@ -111,7 +111,7 @@ void MainWindow::update_vsa_cluster_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_vsa_seed_overlay(
+void OverlayController::update_vsa_seed_overlay(
     const std::vector<VSA_Point3d>& seeds)
 {
     if (seeds.empty()) return;
@@ -140,7 +140,7 @@ void MainWindow::update_vsa_seed_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_vsa_overlay() {
+void OverlayController::clear_vsa_overlay() {
     auto& state = algorithm_overlay_.vsa;
     delete_model_if_live(viewer_, state.cluster_mesh);
     delete_model_if_live(viewer_, state.seed_graph);
@@ -158,7 +158,7 @@ void MainWindow::clear_vsa_overlay() {
     viewer_.mark_dirty();
 }
 
-void MainWindow::promote_vsa_overlay_to_child(
+void OverlayController::promote_vsa_overlay_to_child(
     easy3d::SurfaceMesh* source,
     const std::string& new_name)
 {

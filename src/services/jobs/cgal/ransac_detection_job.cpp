@@ -488,7 +488,10 @@ RansacDetectionJobHandle start_ransac_detection_job(
     controller.begin(AlgorithmId::RansacPrimitive,
                      "RANSAC Detection",
                      request.source_handle,
-                     ResultDisposition::AddPrimitiveChildren);
+                     ResultDisposition::AddPrimitiveChildren,
+                     request.config.live_preview
+                         ? AlgorithmCompletionPolicy::preview_flush()
+                         : AlgorithmCompletionPolicy::immediate());
 
     controller.start_worker(std::thread(
         [&controller,

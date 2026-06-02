@@ -7,7 +7,7 @@
 
 // ARAP deformation interaction and live-preview overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -37,7 +37,7 @@ static const easy3d::vec4 kARAPGroupColors[] = {
     easy3d::vec4(0.0f, 1.0f, 1.0f, 1.0f),   // cyan
 };
 
-void MainWindow::update_arap_roi_overlay(
+void OverlayController::update_arap_roi_overlay(
     const std::vector<easy3d::vec3>& pts)
 {
     auto& state = algorithm_overlay_.arap_interaction;
@@ -63,7 +63,7 @@ void MainWindow::update_arap_roi_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_arap_ctrl_overlay(
+void OverlayController::update_arap_ctrl_overlay(
     const std::vector<easy3d::vec3>& pts,
     const std::vector<int>& group_ids)
 {
@@ -100,7 +100,7 @@ void MainWindow::update_arap_ctrl_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_arap_arrow_overlay(
+void OverlayController::update_arap_arrow_overlay(
     const std::vector<easy3d::vec3>& from,
     const std::vector<easy3d::vec3>& to)
 {
@@ -171,7 +171,7 @@ void MainWindow::update_arap_arrow_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_arap_overlay() {
+void OverlayController::clear_arap_overlay() {
     auto& state = algorithm_overlay_.arap_interaction;
     delete_model_if_live(viewer_, state.roi_graph);
     delete_model_if_live(viewer_, state.control_graph);
@@ -180,7 +180,7 @@ void MainWindow::clear_arap_overlay() {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_arap_frame_overlay(
+void OverlayController::update_arap_frame_overlay(
     const easy3d::vec3& origin_world,
     double tx, double ty, double tz,
     double rx_deg, double ry_deg, double rz_deg,

@@ -8,7 +8,7 @@
 // Align / Transform overlay helpers for MainWindow.
 // Draws the transform gizmo and applies/restores live transform preview.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "viewport/gizmo_constants.h"
 #include "viewport/viewport_canvas.h"
 #include "dialogs/align_dialog.h"
@@ -24,12 +24,12 @@
 #include <cmath>
 
 
-void MainWindow::clear_align_gizmo() {
+void OverlayController::clear_align_gizmo() {
     delete_model_if_live(viewer_, interaction_overlay_.align_gizmo);
 }
 
 
-void MainWindow::update_align_gizmo(const AlignState& s) {
+void OverlayController::update_align_gizmo(const AlignState& s) {
     auto* target = viewer_.current_model();
     if (!target || s.tab != AlignTab::Transform || !s.transform_show_gizmo) {
         clear_align_gizmo();
@@ -130,7 +130,7 @@ void MainWindow::update_align_gizmo(const AlignState& s) {
 }
 
 
-void MainWindow::apply_transform_preview(easy3d::Model* m, AlignState& s) {
+void OverlayController::apply_transform_preview(easy3d::Model* m, AlignState& s) {
     if (!m) return;
 
     auto& pts = m->points();
@@ -182,7 +182,7 @@ void MainWindow::apply_transform_preview(easy3d::Model* m, AlignState& s) {
 }
 
 
-void MainWindow::reset_transform_preview(easy3d::Model* m, AlignState& s) {
+void OverlayController::reset_transform_preview(easy3d::Model* m, AlignState& s) {
     if (!m || s.preview_model != m) return;
     auto& pts = m->points();
     if (pts.size() == s.preview_original_pts.size())

@@ -640,10 +640,12 @@ GeodesicFrontJobHandle start_geodesic_front_job(
     controller.begin(AlgorithmId::GeodesicDistance,
                      "Geodesic Front Propagation",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
-        [runner,
+        [&controller,
+         runner,
          cfg = request.config,
          final_result_ready = request.final_result_ready,
          wake_ui = request.wake_ui]() {
@@ -652,6 +654,7 @@ GeodesicFrontJobHandle start_geodesic_front_job(
             } catch (const std::exception& e) {
                 LOG(ERROR) << "[GEO] worker exception: " << e.what();
             }
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }
@@ -769,10 +772,12 @@ GeodesicCgalJobHandle start_geodesic_exact_path_job(
     controller.begin(AlgorithmId::GeodesicDistance,
                      "Geodesic Exact Shortest Path",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
-        [runner,
+        [&controller,
+         runner,
          path_result = request.path_result,
          result_valid = request.result_valid,
          final_result_ready = request.final_result_ready,
@@ -786,6 +791,7 @@ GeodesicCgalJobHandle start_geodesic_exact_path_job(
             } catch (const std::exception& e) {
                 LOG(ERROR) << "[GEO] exact worker exception: " << e.what();
             }
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }
@@ -831,10 +837,12 @@ GeodesicCgalJobHandle start_geodesic_heat_method_job(
     controller.begin(AlgorithmId::GeodesicDistance,
                      "Geodesic Heat Method",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
-        [runner,
+        [&controller,
+         runner,
          variant = request.heat_variant,
          result_valid = request.result_valid,
          final_result_ready = request.final_result_ready,
@@ -846,6 +854,7 @@ GeodesicCgalJobHandle start_geodesic_heat_method_job(
             } catch (const std::exception& e) {
                 LOG(ERROR) << "[GEO] heat worker exception: " << e.what();
             }
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

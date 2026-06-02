@@ -7,11 +7,11 @@
 
 #include "ai/ai_context.h"
 #include "viewport/viewport_canvas.h"
-#include "model/model_health.h"
-#include "model/operation_history.h"
+#include <model_health.h>
+#include "history/operation_history.h"
+#include "platform/runtime_probe.h"
 #include "services/platform/platform_runtime.h"
 
-#include <easy3d/renderer/opengl.h>
 #include <easy3d/core/surface_mesh.h>
 #include <easy3d/core/point_cloud.h>
 #include <easy3d/core/graph.h>
@@ -42,10 +42,10 @@ void AIContext::probe_runtime() {
     total_memory_mb_ = claw3d::platform::total_physical_memory_mb();
     os_name_ = claw3d::platform::operating_system_name();
 
-    const GLubyte* r = glGetString(GL_RENDERER);
-    const GLubyte* v = glGetString(GL_VERSION);
-    if (r) gpu_renderer_ = reinterpret_cast<const char*>(r);
-    if (v) gl_version_   = reinterpret_cast<const char*>(v);
+    const claw3d::app::GraphicsRuntimeInfo graphics =
+        claw3d::app::probe_graphics_runtime();
+    gpu_renderer_ = graphics.renderer;
+    gl_version_ = graphics.version;
 }
 
 

@@ -5,13 +5,13 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-// Selection overlay rendering helpers for MainWindow.
+// Selection overlay rendering helpers for OverlayController.
 // These are the small overlays that live in the scene as helper Models
 // for face/vertex/point highlights.
 //
 // Extracted out of main_window.cpp during the 2024-2025 split.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "viewport/viewport_canvas.h"
 #include "overlays/overlay_utils.h"
 #include "selection/selection_manager.h"
@@ -25,12 +25,11 @@
 #include <easy3d/renderer/drawable_lines.h>
 #include <easy3d/renderer/drawable_triangles.h>
 
-#include <sstream>
 #include <unordered_map>
 #include <vector>
 
 
-void MainWindow::clear_selection_overlays() {
+void OverlayController::clear_selection_overlays() {
     delete_model_if_live(viewer_, interaction_overlay_.selection_faces);
     delete_model_if_live(viewer_, interaction_overlay_.selection_vertices);
     delete_model_if_live(viewer_, interaction_overlay_.selection_points);
@@ -38,37 +37,8 @@ void MainWindow::clear_selection_overlays() {
 }
 
 
-std::string MainWindow::current_selection_summary() {
-    auto* model = viewer_.current_model();
-    if (!model)
-        return "no current model";
 
-    std::ostringstream ss;
-    ss << "model=" << model->name();
-    bool any = false;
-    if (auto* mesh = dynamic_cast<easy3d::SurfaceMesh*>(model)) {
-        const int nf = selection_manager_.selected_count(
-            mesh, SelectionElementType::SurfaceFace);
-        const int nv = selection_manager_.selected_count(
-            mesh, SelectionElementType::SurfaceVertex);
-        if (nf > 0) { ss << ", faces=" << nf; any = true; }
-        if (nv > 0) { ss << ", vertices=" << nv; any = true; }
-    } else if (auto* cloud = dynamic_cast<easy3d::PointCloud*>(model)) {
-        const int np = selection_manager_.selected_count(
-            cloud, SelectionElementType::PointCloudPoint);
-        if (np > 0) { ss << ", points=" << np; any = true; }
-    }
-    if (!any)
-        ss << ", none";
-    return ss.str();
-}
-
-// has_current_selection / select_scalar_range / clear_current_selection /
-// request_delete_selection_confirmation / extract_selection / delete_selection
-// moved to selection_queries.cpp.
-
-
-void MainWindow::update_selection_overlays() {
+void OverlayController::update_selection_overlays() {
     int rev = selection_manager_.revision();
     auto* model = viewer_.current_model();
 

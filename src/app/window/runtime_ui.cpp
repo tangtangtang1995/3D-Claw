@@ -167,7 +167,8 @@ void MainWindow::render_runtime_status_overlays() {
             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
             ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs);
         ImGui::TextColored(claw_ui::status_running_color(),
-                           "Running: %s%.*s",
+                           "%s: %s%.*s",
+                           algorithm_controller().state_label(),
                            algorithm_controller().current_label().c_str(),
                            dots, "....");
         ImGui::End();

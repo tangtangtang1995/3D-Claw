@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "model/operation_history.h"
+#include "history/operation_history.h"
 
 #include <ctime>
 #include <iomanip>

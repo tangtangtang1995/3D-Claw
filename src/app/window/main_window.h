@@ -32,11 +32,10 @@ namespace easy3d { class SurfaceMesh; class PointCloud; class Graph; }
 #include "services/core/algorithm_controller.h"
 #include "services/io/file_load_controller.h"
 #include "ai/ai_service.h"
-#include "overlays/algorithm_overlay_state.h"
-#include "overlays/interaction_overlay_state.h"
 
 class WalkThrough;
 class AIChatController;
+class OverlayController;
 
 class MainWindow : public easy3d::logging::Logger {
 public:
@@ -52,6 +51,8 @@ public:
     void show_ai_chat() { dlg_ai_ = true; }
     AlgorithmController& algorithm_controller() { return algorithm_; }
     const AlgorithmController& algorithm_controller() const { return algorithm_; }
+    OverlayController& overlays();
+    const OverlayController& overlays() const;
 
     // True while an async file load is in progress OR while the just-loaded
     // models are being uploaded to GPU on the main thread. Main loop uses
@@ -69,156 +70,6 @@ private:
     // --- Async loading / algorithm state ---
     FileLoadController file_loader_;
     AlgorithmController algorithm_;
-    AlgorithmOverlayState algorithm_overlay_;
-
-public:
-    // AW3 live-preview overlays
-    void reset_aw3_process_overlay();
-    void clear_aw3_live_surface_overlay();
-    void refresh_aw3_live_surface_style();
-    void update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& events, bool force = false);
-    void update_aw3_live_surface_overlay(const std::vector<AW3_Point3d>& verts,
-                                         const std::vector<AW3_Triangle>& faces);
-
-    void update_ransac_samples_overlay(const double pts[3][3]);
-    void update_ransac_candidate_overlay(const double plane_eq[4],
-                                         const double sample_pts[3][3],
-                                         float bbox_diag);
-    void clear_ransac_live_overlays();
-
-    void init_rg_overlay(easy3d::PointCloud* src);
-    void update_rg_overlay(std::vector<RGColorCmd>& cmds);
-    void clear_rg_overlays();
-
-    using SimplTrailEntry = ::SimplTrailEntry;
-    void init_simpl_overlay(easy3d::SurfaceMesh* src);
-    void update_simpl_overlay(const std::vector<SimplTrailEntry>& new_entries);
-    void clear_simpl_overlay();
-
-    // Snapshot mesh: a persistent SurfaceMesh model that the dialog refills
-    // each time the runner publishes a new snapshot generation. Using one
-    // long-lived model + clear()/refill avoids creating/destroying renderer
-    // state every ~200 ms, which would flicker.
-    void update_simpl_snapshot_mesh(const std::vector<SIMPL_Point3d>& verts,
-                                    const std::vector<SIMPL_Triangle>& tris,
-                                    float face_opacity = 1.0f);
-    // Snapshot opacity hook retained for UI wiring; live snapshots render solid.
-    void set_simpl_snapshot_opacity(float opacity);
-    void clear_simpl_snapshot_mesh();
-
-    // ACVD live overlay
-    void init_acvd_overlay(easy3d::SurfaceMesh* src);
-    void update_acvd_cluster_overlay(const std::vector<ACVD_Point3d>& verts,
-                                     const std::vector<ACVD_Triangle>& tris,
-                                     const std::vector<int>& face_cluster_ids);
-    void update_acvd_seed_overlay(const std::vector<ACVD_Point3d>& seeds);
-    void clear_acvd_overlay();
-
-    // VSA live overlay. Unlike ACVD whose remeshed clusters change
-    // geometry each iteration, VSA's clusters are face groups on the
-    // source mesh - geometry never changes, only the face->proxy mapping
-    // does. So the overlay mesh is initialized once as a copy of the
-    // source topology, and per-iteration updates only repaint f:color.
-    void init_vsa_overlay(easy3d::SurfaceMesh* src);
-    void update_vsa_cluster_overlay(const std::vector<int>& face_proxy_ids);
-    void update_vsa_seed_overlay(const std::vector<VSA_Point3d>& seeds);
-    void clear_vsa_overlay();
-    // Keep Segmentation: convert the live cluster overlay into a
-    // persistent child model under `source` (named `new_name`). Source
-    // visibility stays as set by init_vsa_overlay (i.e. hidden). The seed
-    // graph + ghost bookkeeping are dropped without restoring source style.
-    void promote_vsa_overlay_to_child(easy3d::SurfaceMesh* source,
-                                      const std::string& new_name);
-
-    // PPR live overlay: patch colors, constrained edges, and detected corners.
-    void init_ppr_overlay(easy3d::SurfaceMesh* src);
-    void update_ppr_patch_overlay(const std::vector<int>& face_patch_ids);
-    void update_ppr_constraint_overlay(
-        const std::vector<PPR_Point3d>& edge_endpoints);
-    void update_ppr_corner_overlay(
-        const std::vector<PPR_Point3d>& corner_points);
-    void clear_ppr_overlay();
-
-    // Smoothing live overlay. Connectivity is invariant during the
-    // smoothing run - only vertex positions move - so we build the overlay
-    // mesh once with the source's topology and per-iteration updates rewrite
-    // v:point and re-trigger the renderer. The source is dimmed to a gray
-    // wireframe ghost.
-    void init_smoothing_overlay(easy3d::SurfaceMesh* src);
-    // Pass the whole snapshot so the overlay can also repaint v:color
-    // from snap.vertex_displacement (displacement heatmap).
-    void update_smoothing_overlay(const SMOOTH_Snapshot& snap);
-    void clear_smoothing_overlay();
-
-    void update_geo_source_overlay(easy3d::SurfaceMesh* source,
-                                   const std::vector<easy3d::vec3>& points);
-    void update_geo_target_overlay(easy3d::SurfaceMesh* source,
-                                   const easy3d::vec3* p);
-    void clear_geo_overlay();
-
-    // Front-propagation distance heatmap.
-    void init_front_overlay(easy3d::SurfaceMesh* src);
-    void update_front_overlay(const GEO_FrontSnapshot& snap);
-    void clear_front_overlay();
-
-    // MCF live meso overlay. Unlike smoothing, MCF mesh topology
-    // changes every iteration (collapse_edges + split_faces), so the
-    // overlay is fully delete/rebuild on each snapshot. Source is dimmed
-    // to a gray wireframe ghost while the run is active.
-    void init_mcf_overlay(easy3d::SurfaceMesh* src);
-    // Pass the whole snapshot so the overlay can shift color
-    // cyan->magenta as convergence advances.
-    void update_mcf_overlay(const MCF_Snapshot& snap);
-    // restore_source = true (cancel/error/close) puts the source mesh
-    // back to its pre-run face/edge state. false (normal end of run) keeps
-    // the source in wireframe-ghost form so the freshly extracted skeleton
-    // stays clearly visible on top.
-    void clear_mcf_overlay(bool restore_source = true);
-
-    // SDF heatmap on source mesh. on = true switches source faces
-    // back visible with per-vertex blue->yellow->red coloring proportional
-    // to skeleton distance. on = false hides the faces again (back to
-    // wireframe-ghost form) but leaves v:color intact for re-enable.
-    void paint_mcf_sdf_on_source(easy3d::SurfaceMesh* src,
-                                 const std::vector<double>& sdf,
-                                 bool on);
-
-    // Correspondence overlay as a Graph polyline (one edge per
-    // skeleton-vertex -> input-vertex line). Empty input clears.
-    void update_mcf_correspondence_overlay(
-        const std::vector<MCF_Line>& lines);
-    void clear_mcf_correspondence_overlay();
-    bool set_mcf_source_ghost_visible(bool visible);
-    bool set_mcf_meso_overlay_visible(bool visible);
-
-    void update_geo_front_path_overlay(easy3d::SurfaceMesh* source,
-                                       const std::vector<float>& xyz_flat);
-    void update_geo_exact_path_overlay(easy3d::SurfaceMesh* source,
-                                       const std::vector<float>& xyz_flat);
-    void clear_geo_path_overlays();
-
-    // ARAP selection, control, arrow, and active-group frame overlays.
-    // origin = ROI centroid (or fallback), transform = translate + Euler ZYX.
-    void update_arap_frame_overlay(const easy3d::vec3& origin_world,
-                                   double tx, double ty, double tz,
-                                   double rx_deg, double ry_deg, double rz_deg,
-                                   float axis_length);
-
-    // Live preview overlay. Topology copies from source (stable across
-    // the run); per-snapshot updates rewrite v:point + v:color heatmap.
-    bool has_arap_preview_overlay();
-    void init_arap_preview_overlay(easy3d::SurfaceMesh* src);
-    void update_arap_preview_overlay(const ARAP_Snapshot& snap);
-    // restore_source = true: cancel/error path puts source back; false:
-    // normal completion keeps wireframe ghost so user can compare.
-    void clear_arap_preview_overlay(bool restore_source);
-
-    void update_arap_roi_overlay(const std::vector<easy3d::vec3>& pts);
-    void update_arap_ctrl_overlay(const std::vector<easy3d::vec3>& pts,
-                                  const std::vector<int>& group_ids);
-    void update_arap_arrow_overlay(const std::vector<easy3d::vec3>& from,
-                                    const std::vector<easy3d::vec3>& to);
-    void clear_arap_overlay();
 
 private:
     void render_menu_bar();
@@ -324,11 +175,10 @@ public:
 
     // --- Selection system ---
     SelectionManager selection_manager_;
+private:
+    std::unique_ptr<OverlayController> overlays_;
+public:
     SelectionMode selection_mode_ = SelectionMode::View;
-    int selection_revision_ = 0;  // incremented on every selection change
-    InteractionOverlayState interaction_overlay_;
-    void update_selection_overlays();
-    void clear_selection_overlays();
     void delete_selection();    // Destructive, callers should confirm first
 
 public:
@@ -343,24 +193,6 @@ public:
                             double max_value,
                             bool clear_first);
 
-    // Crop gizmo overlay - called from crop_dialog.cpp
-    void update_crop_overlay(const CropState& s);
-    void clear_crop_overlay();
-
-    // Transform gizmo: 3D arrows + rotation rings around target's bbox
-    // center, drawn as a Graph overlay. apply_transform_preview drives the
-    // target model's manipulator so the user sees the move/rotate live.
-    void update_align_gizmo(const AlignState& s);
-    void clear_align_gizmo();
-    void apply_transform_preview(easy3d::Model* m, AlignState& s);
-    void reset_transform_preview(easy3d::Model* m, AlignState& s);
-    void save_crop_artifact(const CropState& s, easy3d::Model* source,
-                            const std::string& suffix);
-
-public:
-    // Measurement overlay - called from measurement_dialog.cpp
-    void update_measurement_overlay(const MeasurementState& s);
-    void clear_measurement_overlay();
 
 private:
     bool dlg_gaussian_noise_ = false;

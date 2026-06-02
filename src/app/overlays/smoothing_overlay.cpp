@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 #include "viewport/scene_lighting.h"
@@ -42,7 +42,7 @@ easy3d::vec3 displacement_color(double t) {
 
 } // namespace
 
-void MainWindow::init_smoothing_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_smoothing_overlay(easy3d::SurfaceMesh* src) {
     clear_smoothing_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.smoothing;
@@ -95,7 +95,7 @@ void MainWindow::init_smoothing_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_smoothing_overlay(const SMOOTH_Snapshot& snap)
+void OverlayController::update_smoothing_overlay(const SMOOTH_Snapshot& snap)
 {
     auto& state = algorithm_overlay_.smoothing;
     if (!state.current_mesh || snap.vertices.empty()) return;
@@ -137,7 +137,7 @@ void MainWindow::update_smoothing_overlay(const SMOOTH_Snapshot& snap)
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_smoothing_overlay() {
+void OverlayController::clear_smoothing_overlay() {
     auto& state = algorithm_overlay_.smoothing;
     delete_model_if_live(viewer_, state.current_mesh);
     if (state.source_ghost && model_is_live(viewer_, state.source_ghost)) {

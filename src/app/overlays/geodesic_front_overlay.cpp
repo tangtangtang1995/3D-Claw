@@ -7,7 +7,7 @@
 
 // Geodesic front propagation distance heatmap overlay.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 #include "viewport/scene_lighting.h"
@@ -39,7 +39,7 @@ static easy3d::vec3 geo_distance_color(double t) {
     return lerp(c2, c3, (float)((t - 2.0 / 3.0) * 3.0));
 }
 
-void MainWindow::init_front_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_front_overlay(easy3d::SurfaceMesh* src) {
     clear_front_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.front_propagation;
@@ -114,7 +114,7 @@ void MainWindow::init_front_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_front_overlay(const GEO_FrontSnapshot& snap) {
+void OverlayController::update_front_overlay(const GEO_FrontSnapshot& snap) {
     auto& state = algorithm_overlay_.front_propagation;
     if (!state.overlay_mesh || snap.vertex_distances.empty()) return;
     if (!model_is_live(viewer_, state.overlay_mesh)) {
@@ -148,7 +148,7 @@ void MainWindow::update_front_overlay(const GEO_FrontSnapshot& snap) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_front_overlay() {
+void OverlayController::clear_front_overlay() {
     auto& state = algorithm_overlay_.front_propagation;
     delete_model_if_live(viewer_, state.overlay_mesh);
     if (state.source_ghost && model_is_live(viewer_, state.source_ghost)) {

@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <vector>
 
-void MainWindow::init_ppr_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_ppr_overlay(easy3d::SurfaceMesh* src) {
     clear_ppr_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.planar_patch_remeshing;
@@ -67,7 +67,7 @@ void MainWindow::init_ppr_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_ppr_patch_overlay(
+void OverlayController::update_ppr_patch_overlay(
     const std::vector<int>& face_patch_ids)
 {
     auto& state = algorithm_overlay_.planar_patch_remeshing;
@@ -98,7 +98,7 @@ void MainWindow::update_ppr_patch_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_ppr_constraint_overlay(
+void OverlayController::update_ppr_constraint_overlay(
     const std::vector<PPR_Point3d>& edge_endpoints)
 {
     if (edge_endpoints.size() < 2) return;
@@ -133,7 +133,7 @@ void MainWindow::update_ppr_constraint_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_ppr_corner_overlay(
+void OverlayController::update_ppr_corner_overlay(
     const std::vector<PPR_Point3d>& corner_points)
 {
     if (corner_points.empty()) return;
@@ -163,7 +163,7 @@ void MainWindow::update_ppr_corner_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_ppr_overlay() {
+void OverlayController::clear_ppr_overlay() {
     auto& state = algorithm_overlay_.planar_patch_remeshing;
     delete_model_if_live(viewer_, state.patch_mesh);
     delete_model_if_live(viewer_, state.constraint_graph);

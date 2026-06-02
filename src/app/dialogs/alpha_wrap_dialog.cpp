@@ -9,9 +9,11 @@
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "ai/ai_language.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/alpha_wrap_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
@@ -34,7 +36,6 @@
 #include <limits>
 #include <sstream>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 // =============================================================================
 // AW3 AI help prompt + metadata builder
@@ -102,6 +103,16 @@ static std::string build_aw3_metadata_prompt(easy3d::Model* model, float alpha, 
     return meta.str() + "\n---\n\n" + AW3_HELP_PROMPT + "\n" + ai_lang::directive();
 }
 
+static Aw3OverlayOptions make_aw3_overlay_options(const AlphaWrappingState& s) {
+    Aw3OverlayOptions options;
+    options.live_display_mode = s.live_display_mode;
+    options.live_recent_count = s.live_recent_count;
+    options.live_show_gate = s.live_show_gate;
+    options.live_gate_trail_count = s.live_gate_trail_count;
+    options.live_surface_opacity = s.live_surface_opacity;
+    options.live_surface_wireframe = s.live_surface_wireframe;
+    return options;
+}
 
 // =============================================================================
 // 3.19 Alpha Wrapping 3D
@@ -217,7 +228,7 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                 }
                 if (ImGui::Checkbox("Show Live Surface", &s.live_show_surface)) {
                     if (!s.live_show_surface && win) {
-                        win->clear_aw3_live_surface_overlay();
+                        win->overlays().clear_aw3_live_surface_overlay();
                         s.running_surface_vertices = 0;
                         s.running_surface_faces = 0;
                     }
@@ -235,13 +246,13 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                     surface_style_changed |= ImGui::Checkbox(
                         "Surface Wireframe", &s.live_surface_wireframe);
                     if (surface_style_changed && win)
-                        win->refresh_aw3_live_surface_style();
+                        win->overlays().refresh_aw3_live_surface_style(make_aw3_overlay_options(s));
                 }
                 live_vis_changed |= ImGui::Checkbox(
                     "Clear Live Overlay After Finish", &s.live_clear_on_finish);
                 if (live_vis_changed && win) {
                     std::vector<AW3_FrameEvent> no_events;
-                    win->update_aw3_live_overlay(no_events, true);
+                    win->overlays().update_aw3_live_overlay(no_events, make_aw3_overlay_options(s), true);
                 }
             }
 #ifdef CLAW3D_HAS_CGAL
@@ -272,7 +283,7 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                 }
 
                 if (has_events && win)
-                    win->update_aw3_live_overlay(events);
+                    win->overlays().update_aw3_live_overlay(events, make_aw3_overlay_options(s));
 
                 if (s.live_show_surface && win) {
                     std::vector<AW3_Point3d> verts;
@@ -280,7 +291,7 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                     if (runner.drain_live_surface_snapshot(verts, faces)) {
                         s.running_surface_vertices.store((int)verts.size(), std::memory_order_relaxed);
                         s.running_surface_faces.store((int)faces.size(), std::memory_order_relaxed);
-                        win->update_aw3_live_surface_overlay(verts, faces);
+                        win->overlays().update_aw3_live_surface_overlay(verts, faces, make_aw3_overlay_options(s));
                     }
                 }
             };
@@ -345,6 +356,8 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                 if (ImGui::SmallButton("Cancel##aw3_cancel_run")) {
                     auto runner = s.runner;
                     if (runner) runner.cancel();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
                 }
             } else if (ImGui::Button("Run AW3")) {
                 if (!win) { /* skip */ }
@@ -354,7 +367,7 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                     int surface_interval = (live && s.live_show_surface)
                         ? std::max(1, s.live_surface_interval) : 0;
                     s.runner.reset();
-                    win->reset_aw3_process_overlay();
+                    win->overlays().reset_aw3_process_overlay();
                     s.running_step = 0;
                     s.running_steiner = 0;
                     s.running_carved = 0;
@@ -374,7 +387,7 @@ void renderDialogAlphaWrapping(ViewportCanvas* viewer, AlphaWrappingState& s, bo
                     request.live_preview = live;
                     request.live_surface_interval = surface_interval;
                     request.source_name = model->name();
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     auto runner = claw3d::services::start_alpha_wrap_job(
                         win->algorithm_controller(), request);

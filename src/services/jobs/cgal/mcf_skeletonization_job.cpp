@@ -192,7 +192,8 @@ McfSkeletonizationJobHandle start_mcf_skeletonization_job(
     controller.begin(AlgorithmId::MeanCurvatureFlowSkeleton,
                      "MCF Skeletonization",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -221,6 +222,7 @@ McfSkeletonizationJobHandle start_mcf_skeletonization_job(
                 LOG(ERROR) << "[MCF] worker unknown exception";
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

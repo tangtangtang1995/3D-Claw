@@ -10,10 +10,11 @@
 #include "dialogs/prerequisites.h"
 #include "window/main_window.h"
 #include "viewport/viewport_canvas.h"
-#include "model/model_health.h"
+#include <model_health.h>
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
 #include "ai/ai_language.h"
+#include "platform/window_events.h"
 #include "services/platform/platform_paths.h"
 #include "ui/layout_helpers.h"
 
@@ -27,7 +28,6 @@
 #include <mutex>
 #include <sstream>
 #include <string>
-#include <GLFW/glfw3.h>
 
 namespace {
 
@@ -125,7 +125,7 @@ void renderDialog3DGeneration(ViewportCanvas* viewer, Gen3DDialogState& s, bool&
             open = true;
             s.close_requested = true;
             s.cancelled.store(true);
-            glfwPostEmptyEvent();
+            claw3d::app::wake_event_loop();
         }
 
         // Input mode
@@ -243,7 +243,7 @@ void renderDialog3DGeneration(ViewportCanvas* viewer, Gen3DDialogState& s, bool&
                                      status.model_path);
                 };
                 job.wake_ui = []() {
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 };
                 if (!win || !claw3d::services::start_three_d_generation_job(
                         win->algorithm_controller(), s.worker, job)) {
@@ -258,7 +258,9 @@ void renderDialog3DGeneration(ViewportCanvas* viewer, Gen3DDialogState& s, bool&
                 "%s", current_status.message);
             if (ImGui::Button("Cancel##gen")) {
                 s.cancelled.store(true);
-                glfwPostEmptyEvent();
+                if (win)
+                    win->algorithm_controller().request_cancel();
+                claw3d::app::wake_event_loop();
             }
         }
 

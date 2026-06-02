@@ -11,9 +11,11 @@
 #include "common/preview_policy.h"
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/acvd_remeshing_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/mesh_ai_stats.h"
@@ -31,7 +33,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 static const char* ACVD_HELP_PROMPT =
     "I am using CGAL ACVD Remeshing in 3D Claw. Please advise on parameters.\n\n"
@@ -168,7 +169,9 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
 
         render_panel_header(
@@ -304,7 +307,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                 s.runner.get_seed_positions(seeds);
                 if (!seeds.empty() && seeds.size() != s.seed_positions.size()) {
                     s.seed_positions = seeds;
-                    if (win) win->update_acvd_seed_overlay(seeds);
+                    if (win) win->overlays().update_acvd_seed_overlay(seeds);
                 }
 
                 // Poll cluster snapshot.
@@ -328,14 +331,14 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                                 now, s.last_seed_display_time);
                     }
                     if (show_now && win)
-                        win->update_acvd_cluster_overlay(sv, st, sc);
+                        win->overlays().update_acvd_cluster_overlay(sv, st, sc);
                 }
 
                 // Keep the GLFW loop awake while the worker publishes live
                 // snapshots. Otherwise very fast ACVD runs can finish before
                 // the viewport repaints enough frames to show the spread.
                 if (s.live_preview)
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
             }
 
             // --- Buttons ---
@@ -379,7 +382,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                         std::memory_order_release);
 
                     if (s.live_preview && win)
-                        win->init_acvd_overlay(mesh);
+                        win->overlays().init_acvd_overlay(mesh);
 
                     claw3d::services::AcvdRemeshingJobStart request;
                     request.source_mesh = mesh;
@@ -390,7 +393,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                     request.config = cfg;
                     request.source_name = mesh->name();
                     request.final_result_ready = &s.final_result_ready;
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     if (win) {
                         s.runner = claw3d::services::start_acvd_remeshing_job(
@@ -400,7 +403,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                     }
                     if (!s.runner) {
                         if (s.live_preview && win)
-                            win->clear_acvd_overlay();
+                            win->overlays().clear_acvd_overlay();
                         s.final_result_ready.store(true,
                             std::memory_order_release);
                         s.last_error = "Failed to start ACVD remeshing job.";
@@ -410,7 +413,9 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
             } else {
                 if (s.runner && ImGui::Button("Cancel")) {
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (s.runner && s.runner.is_cancelled()
                     && !s.close_requested) {
@@ -437,7 +442,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
 
                 if (finish_immediately) {
                     if (s.live_preview && win)
-                        win->clear_acvd_overlay();
+                        win->overlays().clear_acvd_overlay();
                     s.runner.copy_error_if_any(s.last_error);
                     s.last_stats = s.runner.debug_stats();
                     s.last_stats_valid = true;
@@ -447,7 +452,7 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                     s.close_requested = false;
                     if (close_after_finish)
                         open = false;
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 } else
                 if (!s.settling) {
                     // Pull the absolute last snapshot in case we missed one
@@ -460,11 +465,13 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                     if (s.runner.poll_cluster_snapshot(s.last_snap_gen,
                             sv, st, sc, centers))
                     {
-                        if (win) win->update_acvd_cluster_overlay(sv, st, sc);
+                        if (win) win->overlays().update_acvd_cluster_overlay(sv, st, sc);
                     }
                     s.runner.copy_error_if_any(s.last_error);
                     s.last_stats = s.runner.debug_stats();
                     s.last_stats_valid = true;
+                    if (win)
+                        win->algorithm_controller().mark_final_preview_holding();
                     s.settling = true;
                     s.settle_started_at = ImGui::GetTime();
                     ImGui::TextColored(claw_ui::status_success_color(),
@@ -474,12 +481,12 @@ void renderDialogACVD(ViewportCanvas* viewer, ACVDState& s, bool& open) {
                     const double now = ImGui::GetTime();
                     const double elapsed = (now - s.settle_started_at) * 1000.0;
                     if (elapsed >= s.settle_ms) {
-                        if (win) win->clear_acvd_overlay();
+                        if (win) win->overlays().clear_acvd_overlay();
                         mark_algorithm_done(win);
                         s.runner.reset();
                         s.settling = false;
                         s.close_requested = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else {
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Done. Holding cluster view %.1fs / %.1fs ...",

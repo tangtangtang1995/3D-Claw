@@ -17,7 +17,6 @@
 #include <easy3d/renderer/key_frame_interpolator.h>
 #include <easy3d/util/dialog.h>
 
-#include <GLFW/glfw3.h>
 #include "imgui.h"
 
 

@@ -8,7 +8,7 @@
 // Crop overlay rendering helpers for MainWindow.
 // Draws the interactive box/plane gizmo and persists accepted crop artifacts.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "viewport/gizmo_constants.h"
 #include "viewport/viewport_canvas.h"
 #include "dialogs/crop_dialog.h"
@@ -27,7 +27,7 @@
 #include <string>
 
 
-void MainWindow::update_crop_overlay(const CropState& s) {
+void OverlayController::update_crop_overlay(const CropState& s) {
     if (s.mode == CropMode::Selection) {
         clear_crop_overlay();
         return;
@@ -174,12 +174,12 @@ void MainWindow::update_crop_overlay(const CropState& s) {
 }
 
 
-void MainWindow::clear_crop_overlay() {
+void OverlayController::clear_crop_overlay() {
     delete_model_if_live(viewer_, interaction_overlay_.crop_gizmo);
 }
 
 
-void MainWindow::save_crop_artifact(const CropState& s,
+void OverlayController::save_crop_artifact(const CropState& s,
                                          easy3d::Model* source,
                                          const std::string& suffix) {
     if (!source || !interaction_overlay_.crop_gizmo || s.mode == CropMode::Selection)

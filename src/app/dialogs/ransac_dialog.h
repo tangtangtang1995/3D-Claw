@@ -16,26 +16,10 @@
 #include <easy3d/core/types.h>
 
 #include "services/jobs/cgal/ransac_detection_job.h"
+#include "overlays/overlay_palette.h"
 
 class ViewportCanvas;
 
-inline easy3d::vec3 ransac_shape_color(int shape_id) {
-    auto h = [](unsigned x) {
-        x = (x ^ 61u) ^ (x >> 16);
-        x = x + (x << 3);
-        x = x ^ (x >> 4);
-        x = x * 0x27d4eb2du;
-        x = x ^ (x >> 15);
-        return x;
-    };
-    unsigned r = h((unsigned)shape_id * 3u + 1u);
-    unsigned g = h((unsigned)shape_id * 3u + 2u);
-    unsigned b = h((unsigned)shape_id * 3u + 3u);
-    return easy3d::vec3(
-        ((r % 151u) + 50u) / 255.0f,
-        ((g % 151u) + 50u) / 255.0f,
-        ((b % 151u) + 50u) / 255.0f);
-}
 
 inline int parse_ransac_shape_id(const std::string& name) {
     if (name.rfind("plane_", 0) != 0) return -1;

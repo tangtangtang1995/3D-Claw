@@ -464,7 +464,8 @@ RegionGrowingJobHandle start_region_growing_job(
     controller.begin(AlgorithmId::RegionGrowing,
                      "Region Growing",
                      request.source_handle,
-                     ResultDisposition::AddPrimitiveChildren);
+                     ResultDisposition::AddPrimitiveChildren,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -483,13 +484,16 @@ RegionGrowingJobHandle start_region_growing_job(
             } catch (const std::exception& e) {
                 LOG(ERROR) << "Region Growing worker exception: " << e.what();
                 runner->set_error(e.what());
-                controller.mark_done();
+                controller.mark_failed(e.what());
             } catch (...) {
                 LOG(ERROR) << "Region Growing worker unknown exception";
                 runner->set_error("unknown worker exception");
-                controller.mark_done();
+                controller.mark_failed("unknown worker exception");
             }
 
+            if (!runner->has_error()) {
+                controller.mark_worker_finished();
+            }
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

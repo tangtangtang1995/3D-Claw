@@ -14,10 +14,10 @@
 #include <vector>
 
 #include "services/jobs/cgal/region_growing_job.h"
+#include "overlays/region_growing_overlay_types.h"
 
 class ViewportCanvas;
 
-struct RGColorCmd { int idx; int region_id; };
 
 struct RegionGrowingState {
     RegionGrowingState() = default;

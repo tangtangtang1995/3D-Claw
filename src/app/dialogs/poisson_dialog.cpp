@@ -10,6 +10,7 @@
 #include "dialogs/prerequisites.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "platform/window_events.h"
 #include "services/jobs/easy3d/poisson_reconstruction_job.h"
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
@@ -26,7 +27,6 @@
 #include <cmath>
 #include <sstream>
 #include <string>
-#include <GLFW/glfw3.h>
 
 static const char* POISSON_HELP_PROMPT = R"(
 Explain Poisson Surface Reconstruction in 3D Claw:
@@ -255,7 +255,7 @@ void renderDialogPoissonReconstruction(ViewportCanvas* viewer, PoissonReconstruc
                     request.cg_depth = s.cg_depth;
                     request.scale = s.scale;
                     request.source_name = cloud->name();
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                     if (!claw3d::services::start_poisson_reconstruction_job(
                             win->algorithm_controller(), request)) {
                         LOG(WARNING) << "Failed to start Poisson reconstruction";

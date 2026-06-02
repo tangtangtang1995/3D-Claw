@@ -12,9 +12,11 @@
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/cgal_smoothing_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ui/layout_helpers.h"
@@ -31,7 +33,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 static const char* SMOOTH_HELP_PROMPT =
     "I am using CGAL Polygon Mesh Processing smoothing in 3D Claw.\n\n"
@@ -186,7 +187,9 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
 
         render_panel_header(
@@ -335,7 +338,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                                     slow_preview_ms);
                             }
                             if (show_now) {
-                                win->update_smoothing_overlay(snap);
+                                win->overlays().update_smoothing_overlay(snap);
                                 s.last_snap_iter      = snap.iteration;
                                 s.last_snap_total     = snap.total_iterations;
                                 s.last_snap_mean_disp = snap.mean_displacement;
@@ -343,7 +346,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                             }
                         }
                     }
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 }
 
                 // Always-on progress line. Lives at a fixed slot inside the
@@ -401,7 +404,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     s.last_snap_max_disp = 0.0;
 
                     if (s.live_preview && win)
-                        win->init_smoothing_overlay(mesh);
+                        win->overlays().init_smoothing_overlay(mesh);
 
                     claw3d::services::CgalSmoothingJobStart request;
                     request.source_mesh = mesh;
@@ -412,7 +415,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     request.config = cfg;
                     request.source_name = mesh->name();
                     request.final_result_ready = &s.final_result_ready;
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     if (win) {
                         s.runner = claw3d::services::start_cgal_smoothing_job(
@@ -422,7 +425,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     }
                     if (!s.runner) {
                         if (s.live_preview && win)
-                            win->clear_smoothing_overlay();
+                            win->overlays().clear_smoothing_overlay();
                         s.final_result_ready.store(true,
                             std::memory_order_release);
                         s.last_error = "Failed to start smoothing job.";
@@ -432,7 +435,9 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
             } else {
                 if (s.runner && ImGui::Button("Cancel")) {
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (s.runner && s.runner.is_cancelled() && !s.close_requested) {
                     claw_ui::same_line_if_fits_text("Cancel requested...");
@@ -454,7 +459,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     s.runner.cancelled_or_failed();
                 if (finish_immediately) {
                     if (s.live_preview && win)
-                        win->clear_smoothing_overlay();
+                        win->overlays().clear_smoothing_overlay();
                     s.runner.copy_error_if_any(s.last_error);
                     s.last_stats = s.runner.result_stats();
                     s.last_stats_valid = true;
@@ -463,7 +468,7 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     s.settling = false;
                     s.close_requested = false;
                     if (close_after) open = false;
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 } else if (!s.settling) {
                     // Drain a final snapshot so the overlay reflects the
                     // last iteration before settle locks the view.
@@ -471,11 +476,13 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                         win && !snap.vertices.empty())
                     {
-                        win->update_smoothing_overlay(snap);
+                        win->overlays().update_smoothing_overlay(snap);
                     }
                     s.runner.copy_error_if_any(s.last_error);
                     s.last_stats = s.runner.result_stats();
                     s.last_stats_valid = true;
+                    if (win)
+                        win->algorithm_controller().mark_final_preview_holding();
                     s.settling = true;
                     s.settle_started_at = ImGui::GetTime();
                     ImGui::TextColored(claw_ui::status_success_color(),
@@ -486,12 +493,12 @@ void renderDialogCGALSmoothing(ViewportCanvas* viewer, SmoothingState& s, bool& 
                     const double elapsed =
                         (now - s.settle_started_at) * 1000.0;
                     if (elapsed >= s.settle_ms) {
-                        if (win) win->clear_smoothing_overlay();
+                        if (win) win->overlays().clear_smoothing_overlay();
                         mark_algorithm_done(win);
                         s.runner.reset();
                         s.settling = false;
                         s.close_requested = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else {
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Done. Holding final mesh %.1fs / %.1fs ...",

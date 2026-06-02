@@ -10,9 +10,11 @@
 #include "dialogs/prerequisites.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/arap_deformation_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ui/layout_helpers.h"
@@ -38,7 +40,6 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 static const char* ARAP_HELP_PROMPT =
     "I am using CGAL As-Rigid-As-Possible (ARAP) Surface Mesh Deformation in 3D Claw.\n\n"
@@ -464,7 +465,7 @@ void push_arap_overlays(MainWindow* win,
         if (v.is_valid() && vid < (int)mesh->n_vertices())
             roi_pts.push_back(pts[v]);
     }
-    win->update_arap_roi_overlay(roi_pts);
+    win->overlays().update_arap_roi_overlay(roi_pts);
 
     // Control points (color by group) + target arrows.
     std::vector<easy3d::vec3> ctrl_pts;
@@ -479,7 +480,7 @@ void push_arap_overlays(MainWindow* win,
         int gid = i < s.control_group_ids.size() ? s.control_group_ids[i] : 0;
         ctrl_groups.push_back(gid);
     }
-    win->update_arap_ctrl_overlay(ctrl_pts, ctrl_groups);
+    win->overlays().update_arap_ctrl_overlay(ctrl_pts, ctrl_groups);
 
     // Rotation center = ROI centroid (see comment on compute_rotation_center).
     double cx = 0, cy = 0, cz = 0;
@@ -502,7 +503,7 @@ void push_arap_overlays(MainWindow* win,
                              cx, cy, cz, s.tx, s.ty, s.tz,
                              s.rx_deg, s.ry_deg, s.rz_deg,
                              arrow_from, arrow_to);
-    win->update_arap_arrow_overlay(arrow_from, arrow_to);
+    win->overlays().update_arap_arrow_overlay(arrow_from, arrow_to);
 
     // Draw a 3-axis local frame indicator at the ROI centroid, rotated by
     // the current transform. Gives the user a visible coordinate gizmo
@@ -510,7 +511,7 @@ void push_arap_overlays(MainWindow* win,
     const auto& bb = mesh->bounding_box();
     const float axis_len = (float)((bb.is_valid()
         ? (double)bb.diagonal_length() : 1.0) * 0.10);
-    win->update_arap_frame_overlay(
+    win->overlays().update_arap_frame_overlay(
         easy3d::vec3((float)cx, (float)cy, (float)cz),
         s.tx, s.ty, s.tz,
         s.rx_deg, s.ry_deg, s.rz_deg,
@@ -533,11 +534,13 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
         if (!open && win) {
-            win->clear_arap_overlay();
-            win->clear_arap_preview_overlay(/*restore_source=*/true);
+            win->overlays().clear_arap_overlay();
+            win->overlays().clear_arap_preview_overlay(/*restore_source=*/true);
             // Always release camera lock so closing mid-drag doesn't
             // strand the viewer in unresponsive state.
             if (auto* vw = win->viewer()) vw->input_locked_ = false;
@@ -713,7 +716,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                         std::snprintf(s.pick_status, sizeof(s.pick_status),
                             "Drag released (%s) -> running deform...",
                             s.drag_mode == 1 ? "rotate" : "translate");
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     }
                 }
             }
@@ -1107,10 +1110,10 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
 
             // Reset Preview: clear the live overlay so the user can compare
             // current selection without a leftover deformed mesh on screen.
-            if (win && win->has_arap_preview_overlay()) {
+            if (win && win->overlays().has_arap_preview_overlay()) {
                 claw_ui::same_line_if_fits_button("Reset Preview");
                 if (ImGui::Button("Reset Preview")) {
-                    win->clear_arap_preview_overlay(/*restore_source=*/true);
+                    win->overlays().clear_arap_preview_overlay(/*restore_source=*/true);
                 }
             }
 
@@ -1210,7 +1213,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     s.settle_started_at = 0.0;
 
                     if (s.live_preview)
-                        win->init_arap_preview_overlay(mesh);
+                        win->overlays().init_arap_preview_overlay(mesh);
 
                     claw3d::services::ArapDeformationJobStart request;
                     request.source_mesh = mesh;
@@ -1223,7 +1226,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     request.control_transform = xf;
                     request.source_name = mesh->name();
                     request.final_result_ready = &s.final_result_ready;
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     if (win) {
                         s.runner = claw3d::services::start_arap_deformation_job(
@@ -1233,7 +1236,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     }
                     if (!s.runner) {
                         if (s.live_preview && win)
-                            win->clear_arap_preview_overlay(
+                            win->overlays().clear_arap_preview_overlay(
                                 /*restore_source=*/true);
                         s.final_result_ready.store(true,
                             std::memory_order_release);
@@ -1253,7 +1256,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                         !snap.vertices.empty())
                     {
-                        win->update_arap_preview_overlay(snap);
+                        win->overlays().update_arap_preview_overlay(snap);
                     }
                 }
                 ImGui::TextColored(claw_ui::status_success_color(),
@@ -1265,7 +1268,9 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                 }
                 if (ImGui::Button("Cancel")) {
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (s.runner && s.runner.is_cancelled()) {
                     claw_ui::same_line_if_fits_text("Cancel requested...");
@@ -1287,7 +1292,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     s.runner.is_cancelled() || s.runner.has_error();
                 if (finish_immediately) {
                     if (s.live_preview && win)
-                        win->clear_arap_preview_overlay(/*restore_source=*/true);
+                        win->overlays().clear_arap_preview_overlay(/*restore_source=*/true);
                     if (s.runner.has_error())
                         s.last_error = s.runner.last_error();
                     s.runner.get_result(s.last_result);
@@ -1304,12 +1309,14 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                     if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                         win && !snap.vertices.empty())
                     {
-                        win->update_arap_preview_overlay(snap);
+                        win->overlays().update_arap_preview_overlay(snap);
                     }
                     if (s.runner.has_error())
                         s.last_error = s.runner.last_error();
                     s.runner.get_result(s.last_result);
                     s.last_result_valid = true;
+                    if (win)
+                        win->algorithm_controller().mark_final_preview_holding();
                     s.settling = true;
                     s.settle_started_at = ImGui::GetTime();
                     ImGui::TextColored(claw_ui::status_success_color(),
@@ -1326,8 +1333,8 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                         // since they describe the SOURCE selection and would
                         // look stale against the deformed mesh.
                         if (win) {
-                            win->clear_arap_preview_overlay(/*restore_source=*/true);
-                            win->clear_arap_overlay();
+                            win->overlays().clear_arap_preview_overlay(/*restore_source=*/true);
+                            win->overlays().clear_arap_overlay();
                             if (mesh && mesh->renderer())
                                 mesh->renderer()->set_visible(false);
                             win->viewer()->mark_dirty();
@@ -1336,7 +1343,7 @@ void renderDialogARAPDeformation(ViewportCanvas* viewer, ARAPDeformationState& s
                         s.runner.reset();
                         s.settling = false;
                         s.close_requested = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else {
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Done. Holding deformed mesh %.1fs / %.1fs ...",

@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -86,7 +86,7 @@ easy3d::vec3 mcf_sdf_color(double t) {
 
 } // namespace
 
-void MainWindow::init_mcf_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_mcf_overlay(easy3d::SurfaceMesh* src) {
     clear_mcf_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.mcf;
@@ -111,7 +111,7 @@ void MainWindow::init_mcf_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_mcf_overlay(const MCF_Snapshot& snap) {
+void OverlayController::update_mcf_overlay(const MCF_Snapshot& snap) {
     if (snap.vertices.empty() || snap.triangles.empty()) return;
     auto& state = algorithm_overlay_.mcf;
     delete_model_if_live(viewer_, state.meso_overlay);
@@ -150,7 +150,7 @@ void MainWindow::update_mcf_overlay(const MCF_Snapshot& snap) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::paint_mcf_sdf_on_source(easy3d::SurfaceMesh* src,
+void OverlayController::paint_mcf_sdf_on_source(easy3d::SurfaceMesh* src,
                                               const std::vector<double>& sdf,
                                               bool on) {
     if (!src) return;
@@ -203,7 +203,7 @@ void MainWindow::paint_mcf_sdf_on_source(easy3d::SurfaceMesh* src,
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_mcf_correspondence_overlay(
+void OverlayController::update_mcf_correspondence_overlay(
     const std::vector<MCF_Line>& lines) {
     auto& state = algorithm_overlay_.mcf;
     delete_model_if_live(viewer_, state.correspondence_graph);
@@ -234,12 +234,12 @@ void MainWindow::update_mcf_correspondence_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_mcf_correspondence_overlay() {
+void OverlayController::clear_mcf_correspondence_overlay() {
     delete_model_if_live(viewer_, algorithm_overlay_.mcf.correspondence_graph);
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_mcf_overlay(bool restore_source) {
+void OverlayController::clear_mcf_overlay(bool restore_source) {
     auto& state = algorithm_overlay_.mcf;
     delete_model_if_live(viewer_, state.meso_overlay);
     delete_model_if_live(viewer_, state.correspondence_graph);
@@ -271,7 +271,7 @@ void MainWindow::clear_mcf_overlay(bool restore_source) {
     viewer_.mark_dirty();
 }
 
-bool MainWindow::set_mcf_source_ghost_visible(bool visible) {
+bool OverlayController::set_mcf_source_ghost_visible(bool visible) {
     auto& state = algorithm_overlay_.mcf;
     if (!state.source_ghost || !model_is_live(viewer_, state.source_ghost)) {
         state.source_ghost = nullptr;
@@ -282,7 +282,7 @@ bool MainWindow::set_mcf_source_ghost_visible(bool visible) {
     return true;
 }
 
-bool MainWindow::set_mcf_meso_overlay_visible(bool visible) {
+bool OverlayController::set_mcf_meso_overlay_visible(bool visible) {
     auto& state = algorithm_overlay_.mcf;
     if (!state.meso_overlay || !model_is_live(viewer_, state.meso_overlay)) {
         state.meso_overlay = nullptr;

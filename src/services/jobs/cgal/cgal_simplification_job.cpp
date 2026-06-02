@@ -180,7 +180,8 @@ CgalSimplificationJobHandle start_cgal_simplification_job(
     controller.begin(AlgorithmId::CgalSimplification,
                      "CGAL Simplification",
                      request.source_handle,
-                     ResultDisposition::HideSourceAndAddChild);
+                     ResultDisposition::HideSourceAndAddChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -213,6 +214,7 @@ CgalSimplificationJobHandle start_cgal_simplification_job(
                 runner->set_error("unknown worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

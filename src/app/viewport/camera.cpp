@@ -7,6 +7,8 @@
 
 #include "viewport/viewport_canvas.h"
 
+#include "platform/clipboard.h"
+
 #include <easy3d/renderer/opengl.h>
 #include <easy3d/renderer/camera.h>
 #include <easy3d/renderer/drawable_lines.h>
@@ -16,7 +18,6 @@
 #include <easy3d/util/logging.h>
 
 #include <3rd_party/stb/stb_image_write.h>
-#include <GLFW/glfw3.h>
 
 #include <cstdio>
 #include <cstring>
@@ -29,17 +30,17 @@ void ViewportCanvas::copy_camera() {
     char buf[256];
     snprintf(buf, sizeof(buf), "%.6f %.6f %.6f %.6f %.6f %.6f %.6f",
              pos[0], pos[1], pos[2], q[0], q[1], q[2], q[3]);
-    glfwSetClipboardString(nullptr, buf);
+    claw3d::app::set_clipboard_text(buf);
     LOG(INFO) << "camera copied to clipboard";
 }
 
 void ViewportCanvas::paste_camera() {
-    const char* str = glfwGetClipboardString(nullptr);
-    if (!str)
+    const std::string text = claw3d::app::clipboard_text();
+    if (text.empty())
         return;
 
     float v[7];
-    int n = sscanf(str, "%f %f %f %f %f %f %f",
+    int n = sscanf(text.c_str(), "%f %f %f %f %f %f %f",
                    &v[0], &v[1], &v[2], &v[3], &v[4], &v[5], &v[6]);
     if (n != 7) {
         LOG(WARNING) << "camera not available in clipboard";

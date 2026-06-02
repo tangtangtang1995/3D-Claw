@@ -82,7 +82,7 @@ easy3d::Model* resolve_current_algorithm_source(MainWindow* win) {
 
 void mark_algorithm_done(MainWindow* win) {
     if (win)
-        win->algorithm_controller().mark_done();
+        win->algorithm_controller().mark_ready_for_ui_commit();
 }
 
 

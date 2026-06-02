@@ -27,12 +27,13 @@
 #include "icp.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "selection/selection_manager.h"
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "ai/ai_context.h"
 #include "ai/ai_language.h"
-#include "model/model_health.h"
+#include <model_health.h>
 #include "ui/layout_helpers.h"
 
 
@@ -250,7 +251,7 @@ void renderDialogAlign(ViewportCanvas* viewer, MainWindow* win,
                     ImGui::Separator();
                     if (ImGui::Button("Reset")) {
                         if (s.preview_model)
-                            win->reset_transform_preview(target, s);
+                            win->overlays().reset_transform_preview(target, s);
                         s.tx = s.ty = s.tz = 0.f;
                         s.rx = s.ry = s.rz = 0.f;
                         s.sx = s.sy = s.sz = 1.f;
@@ -268,7 +269,7 @@ void renderDialogAlign(ViewportCanvas* viewer, MainWindow* win,
                         // Clear preview cache before baking; geometry is about to
                         // be permanently modified
                         if (s.preview_model)
-                            win->reset_transform_preview(target, s);
+                            win->overlays().reset_transform_preview(target, s);
                         apply_transform_to_geometry(target, T, "Transform / manual TRS");
                         char buf[80];
                         std::snprintf(buf, sizeof(buf),

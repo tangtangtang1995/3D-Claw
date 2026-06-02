@@ -7,7 +7,7 @@
 
 // Region Growing live overlay.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "viewport/viewport_canvas.h"
 
 #include <easy3d/core/point_cloud.h>
@@ -17,7 +17,7 @@
 
 #include <vector>
 
-void MainWindow::init_rg_overlay(easy3d::PointCloud* src) {
+void OverlayController::init_rg_overlay(easy3d::PointCloud* src) {
     clear_rg_overlays();
     if (!src || src->n_vertices() == 0) return;
 
@@ -42,7 +42,7 @@ void MainWindow::init_rg_overlay(easy3d::PointCloud* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_rg_overlay(std::vector<RGColorCmd>& cmds) {
+void OverlayController::update_rg_overlay(std::vector<RGColorCmd>& cmds) {
     if (!algorithm_overlay_.region_growing_source || cmds.empty()) return;
     auto colors = algorithm_overlay_.region_growing_source
         ->get_vertex_property<easy3d::vec3>("v:color");
@@ -59,7 +59,7 @@ void MainWindow::update_rg_overlay(std::vector<RGColorCmd>& cmds) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_rg_overlays() {
+void OverlayController::clear_rg_overlays() {
     if (!algorithm_overlay_.region_growing_source) return;
     auto* vd = algorithm_overlay_.region_growing_source->renderer()
         ->get_points_drawable("vertices");

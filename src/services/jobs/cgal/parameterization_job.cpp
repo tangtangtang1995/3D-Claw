@@ -132,10 +132,12 @@ ParameterizationJobHandle start_parameterization_job(
     controller.begin(AlgorithmId::Parameterization,
                      "Parameterization",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
-        [runner,
+        [&controller,
+         runner,
          final_result_ready = request.final_result_ready,
          wake_holder]() {
             try {
@@ -147,6 +149,7 @@ ParameterizationJobHandle start_parameterization_job(
                     "unknown parameterization worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

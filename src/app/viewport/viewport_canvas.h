@@ -11,6 +11,7 @@
 /// Scene viewport, model ownership, picking, rendering, and camera interaction.
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
@@ -20,12 +21,6 @@
 #include <easy3d/core/types.h>
 
 #include "common/model_handle.h"
-
-struct ImDrawList; // fwd from imgui.h
-using ImU32 = unsigned int;
-ImU32 colormap_color(float t);
-
-struct GLFWwindow;
 
 enum class SelectionMode : int;
 class SelectionManager;
@@ -176,6 +171,7 @@ private:
     void destroy_fbo();
 
     // Rendering stages
+    std::uintptr_t render_scene_texture(int width, int height);
     void pre_draw();
     void draw_scene();
     void post_draw();
@@ -318,6 +314,12 @@ public:
         return screen_x >= viewport_min_x_ && screen_x <= viewport_max_x_ &&
                screen_y >= viewport_min_y_ && screen_y <= viewport_max_y_;
     }
+
+    // Runs `callback` with the OpenGL viewport matched to the docked viewport
+    // panel size, then restores the previous OpenGL viewport. This keeps UI
+    // panels from depending on OpenGL headers for one-shot picker operations.
+    void run_with_panel_gl_viewport(int width, int height,
+                                    const std::function<void()>& callback);
 };
 
 #endif // CLAW3D_VIEWPORT_CANVAS_H

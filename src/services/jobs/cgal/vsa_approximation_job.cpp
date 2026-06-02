@@ -163,7 +163,8 @@ VsaApproximationJobHandle start_vsa_approximation_job(
     controller.begin(AlgorithmId::VsaApproximation,
                      "VSA Approximation",
                      request.source_handle,
-                     ResultDisposition::HideSourceAndAddChild);
+                     ResultDisposition::HideSourceAndAddChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -200,6 +201,7 @@ VsaApproximationJobHandle start_vsa_approximation_job(
                 runner->set_error("unknown worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

@@ -7,10 +7,11 @@
 
 // Alpha Wrap 3D live-preview overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
-#include "model/alpha_wrap.h"
+
+#include "common/alpha_wrap_contract.h"
 
 #include <easy3d/core/surface_mesh.h>
 #include <easy3d/core/point_cloud.h>
@@ -25,7 +26,41 @@
 #include <algorithm>
 #include <vector>
 
-void MainWindow::reset_aw3_process_overlay() {
+namespace {
+
+easy3d::SurfaceMesh* convert_aw3_pod_to_easy3d(
+        const std::vector<AW3_Point3d>& points,
+        const std::vector<AW3_Triangle>& faces) {
+    auto* mesh = new easy3d::SurfaceMesh;
+    easy3d::SurfaceMeshBuilder builder(mesh);
+    builder.begin_surface();
+
+    std::vector<easy3d::SurfaceMesh::Vertex> vertices;
+    vertices.reserve(points.size());
+    for (const auto& p : points) {
+        vertices.push_back(builder.add_vertex(easy3d::vec3(
+            static_cast<float>(p.x),
+            static_cast<float>(p.y),
+            static_cast<float>(p.z))));
+    }
+
+    for (const auto& f : faces) {
+        if (f.v0 < 0 || f.v1 < 0 || f.v2 < 0 ||
+            f.v0 >= static_cast<int>(vertices.size()) ||
+            f.v1 >= static_cast<int>(vertices.size()) ||
+            f.v2 >= static_cast<int>(vertices.size())) {
+            continue;
+        }
+        builder.add_face({vertices[f.v0], vertices[f.v1], vertices[f.v2]});
+    }
+
+    builder.end_surface(false);
+    return mesh;
+}
+
+} // namespace
+
+void OverlayController::reset_aw3_process_overlay() {
     auto& aw3 = algorithm_overlay_.aw3;
 
     auto* saved_current = viewer_.current_model();
@@ -55,7 +90,7 @@ void MainWindow::reset_aw3_process_overlay() {
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_aw3_live_surface_overlay() {
+void OverlayController::clear_aw3_live_surface_overlay() {
     auto& aw3 = algorithm_overlay_.aw3;
 
     auto* saved_current = viewer_.current_model();
@@ -71,7 +106,7 @@ void MainWindow::clear_aw3_live_surface_overlay() {
     viewer_.mark_dirty();
 }
 
-void MainWindow::refresh_aw3_live_surface_style() {
+void OverlayController::refresh_aw3_live_surface_style(const Aw3OverlayOptions& options) {
     auto& aw3 = algorithm_overlay_.aw3;
 
     if (aw3.live_surface_mesh && !model_is_live(viewer_, aw3.live_surface_mesh))
@@ -79,7 +114,7 @@ void MainWindow::refresh_aw3_live_surface_style() {
     if (!aw3.live_surface_mesh)
         return;
 
-    float opacity = st_alpha_wrap_.live_surface_opacity;
+    float opacity = options.live_surface_opacity;
     if (opacity < 0.05f) opacity = 0.05f;
     if (opacity > 0.80f) opacity = 0.80f;
 
@@ -91,7 +126,7 @@ void MainWindow::refresh_aw3_live_surface_style() {
     }
     auto* ed = aw3.live_surface_mesh->renderer()->get_lines_drawable("edges", false);
     if (ed) {
-        ed->set_visible(st_alpha_wrap_.live_surface_wireframe);
+        ed->set_visible(options.live_surface_wireframe);
         ed->set_uniform_coloring(easy3d::vec4(0.0f, 0.9f, 1.0f, 1.0f));
         ed->set_line_width(1.0f);
         ed->set_impostor_type(easy3d::LinesDrawable::PLAIN);
@@ -103,9 +138,10 @@ void MainWindow::refresh_aw3_live_surface_style() {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_aw3_live_surface_overlay(
+void OverlayController::update_aw3_live_surface_overlay(
     const std::vector<AW3_Point3d>& verts,
-    const std::vector<AW3_Triangle>& faces)
+    const std::vector<AW3_Triangle>& faces,
+    const Aw3OverlayOptions& options)
 {
     auto& aw3 = algorithm_overlay_.aw3;
 
@@ -122,7 +158,7 @@ void MainWindow::update_aw3_live_surface_overlay(
         aw3.live_surface_mesh = nullptr;
     }
 
-    aw3.live_surface_mesh = convert_pod_to_easy3d(verts, faces);
+    aw3.live_surface_mesh = convert_aw3_pod_to_easy3d(verts, faces);
     if (!aw3.live_surface_mesh) {
         if (saved_current && saved_current != removed && model_is_live(viewer_, saved_current))
             viewer_.set_current_model(saved_current);
@@ -133,14 +169,14 @@ void MainWindow::update_aw3_live_surface_overlay(
     aw3.live_surface_mesh->set_name("aw3_live_surface");
     viewer_.add_model(aw3.live_surface_mesh);
     viewer_.register_model_tree_overlay(aw3.live_surface_mesh, saved_current);
-    refresh_aw3_live_surface_style();
+    refresh_aw3_live_surface_style(options);
 
     if (saved_current && saved_current != removed && model_is_live(viewer_, saved_current))
         viewer_.set_current_model(saved_current);
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& events, bool force) {
+void OverlayController::update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& events, const Aw3OverlayOptions& options, bool force) {
     auto& aw3 = algorithm_overlay_.aw3;
     size_t added = 0;
     bool gate_changed = false;
@@ -189,10 +225,10 @@ void MainWindow::update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& even
             created = true;
         }
 
-        int mode = st_alpha_wrap_.live_display_mode;
+        int mode = options.live_display_mode;
         if (mode < 0) mode = 0;
         if (mode > 2) mode = 2;
-        int recent_count = std::max(1, st_alpha_wrap_.live_recent_count);
+        int recent_count = std::max(1, options.live_recent_count);
 
         const size_t total = aw3.steiner_events.size();
         size_t first = 0;
@@ -239,7 +275,7 @@ void MainWindow::update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& even
         }
     }
 
-    if (!st_alpha_wrap_.live_show_gate) {
+    if (!options.live_show_gate) {
         if (aw3.gate_mesh) {
             viewer_.delete_model(aw3.gate_mesh);
             aw3.gate_mesh = nullptr;
@@ -254,7 +290,7 @@ void MainWindow::update_aw3_live_overlay(const std::vector<AW3_FrameEvent>& even
             aw3.gate_mesh->clear();
         }
 
-        int trail_count = std::max(1, st_alpha_wrap_.live_gate_trail_count);
+        int trail_count = std::max(1, options.live_gate_trail_count);
         const size_t total = aw3.gate_events.size();
         size_t first = 0;
         if (total > (size_t)trail_count)

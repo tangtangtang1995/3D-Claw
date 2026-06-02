@@ -12,6 +12,7 @@
 #include "window/main_window.h"
 #include "viewport/viewport_canvas.h"
 #include "io/surface_mesh_io.h"
+#include "platform/window_events.h"
 #include "services/resources/resource_paths.h"
 #include "util/thread_priority.h"
 
@@ -24,8 +25,6 @@
 #include <easy3d/util/dialog.h>
 #include <easy3d/util/file_system.h>
 #include <easy3d/util/logging.h>
-
-#include <GLFW/glfw3.h>
 
 #include "imgui.h"
 
@@ -43,7 +42,7 @@ void MainWindow::render_menu_file() {
             menu_file_save();
         ImGui::Separator();
         if (ImGui::MenuItem("Exit", "Alt+F4"))
-            glfwSetWindowShouldClose(glfwGetCurrentContext(), GLFW_TRUE);
+            claw3d::app::request_window_close();
         ImGui::EndMenu();
     }
 }
@@ -84,8 +83,8 @@ void MainWindow::load_files_async(std::vector<std::string> filenames) {
         }
         file_loader_.finish_loading(std::move(models));
         // Wake the main thread so it picks up the result immediately,
-        // even if it's currently blocked in glfwWaitEvents*.
-        glfwPostEmptyEvent();
+        // even if it's currently blocked waiting for window events.
+        claw3d::app::wake_event_loop();
     }));
 }
 

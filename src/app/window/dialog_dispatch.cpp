@@ -6,6 +6,7 @@
 // under the GNU General Public License v3. See the root LICENSE file.
 
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "ui/layout_helpers.h"
 #include "ui/walk_through.h"
 #include "product_identity.h"
@@ -83,15 +84,15 @@ void MainWindow::render_dialogs() {
             st_measure_.picking = false;
             st_measure_.points.clear();
             if (st_measure_.history.empty())
-                clear_measurement_overlay();
+                overlays().clear_measurement_overlay();
             else
-                update_measurement_overlay(st_measure_);
+                overlays().update_measurement_overlay(st_measure_);
             st_measure_.overlay_dirty = false;
         }
     }
     if (dlg_crop_) {
         renderDialogCrop(viewer(), this, st_crop_, dlg_crop_);
-        if (!dlg_crop_) clear_crop_overlay();
+        if (!dlg_crop_) overlays().clear_crop_overlay();
     }
     // Transform tab: keep the live preview + gizmo in sync each frame
     // while the dialog is open; clean both up on close.
@@ -103,17 +104,17 @@ void MainWindow::render_dialogs() {
             if (st_align_.tab == AlignTab::Transform) {
                 // Apply preview FIRST so bb.center() reflects the current state,
                 // THEN update gizmo to match the new position.
-                apply_transform_preview(viewer_.current_model(), st_align_);
-                update_align_gizmo(st_align_);
+                overlays().apply_transform_preview(viewer_.current_model(), st_align_);
+                overlays().update_align_gizmo(st_align_);
             } else {
-                clear_align_gizmo();
-                reset_transform_preview(viewer_.current_model(), st_align_);
+                overlays().clear_align_gizmo();
+                overlays().reset_transform_preview(viewer_.current_model(), st_align_);
                 viewer_.set_selection_bbox_suppressed(false);
             }
         }
         if (was_open && !dlg_align_) {
-            clear_align_gizmo();
-            reset_transform_preview(viewer_.current_model(), st_align_);
+            overlays().clear_align_gizmo();
+            overlays().reset_transform_preview(viewer_.current_model(), st_align_);
             viewer_.set_selection_bbox_suppressed(false);
             viewer_.set_align_state(nullptr);
             // Restore selection bbox visibility

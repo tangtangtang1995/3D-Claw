@@ -11,9 +11,11 @@
 #include "common/preview_policy.h"
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/vsa_approximation_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/mesh_ai_stats.h"
@@ -31,7 +33,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 static const char* VSA_HELP_PROMPT =
     "I am using CGAL Variational Shape Approximation (VSA) in 3D Claw.\n\n"
@@ -208,7 +209,9 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
 
         render_panel_header(
@@ -416,7 +419,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                                 slow_preview_ms);
                         }
                         if (show_now) {
-                            win->update_vsa_cluster_overlay(
+                            win->overlays().update_vsa_cluster_overlay(
                                 snap.face_proxy_ids);
                             // Publish proxy seed positions once on the first
                             // snapshot (seeding phase). Centers may jitter as
@@ -429,14 +432,14 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                                 seeds.reserve(snap.proxies_info.size());
                                 for (const auto& p : snap.proxies_info)
                                     seeds.push_back(p.seed_center);
-                                win->update_vsa_seed_overlay(seeds);
+                                win->overlays().update_vsa_seed_overlay(seeds);
                                 s.seeds_published = true;
                             }
                         }
                     }
                     // Keep the event loop awake; small meshes can outrun the
                     // viewport's natural redraw cadence.
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 }
             }
 
@@ -492,7 +495,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                             std::memory_order_release);
 
                         if (s.live_preview && win)
-                            win->init_vsa_overlay(mesh);
+                            win->overlays().init_vsa_overlay(mesh);
 
                         claw3d::services::VsaApproximationJobStart request;
                         request.source_mesh = mesh;
@@ -503,7 +506,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                         request.config = cfg;
                         request.source_name = mesh->name();
                         request.final_result_ready = &s.final_result_ready;
-                        request.wake_ui = []() { glfwPostEmptyEvent(); };
+                        request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                         if (win) {
                             s.runner =
@@ -514,7 +517,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                         }
                         if (!s.runner) {
                             if (s.live_preview && win)
-                                win->clear_vsa_overlay();
+                                win->overlays().clear_vsa_overlay();
                             s.final_result_ready.store(true,
                                 std::memory_order_release);
                             s.last_error =
@@ -526,7 +529,9 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
             } else {
                 if (s.runner && ImGui::Button("Cancel")) {
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (s.runner && s.runner.is_cancelled()
                     && !s.close_requested) {
@@ -565,9 +570,9 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                             src ? src->name().c_str() : "vsa",
                             metric_slug(s.last_run_metric),
                             s.last_run_target_proxies);
-                        win->promote_vsa_overlay_to_child(src, nm);
+                        win->overlays().promote_vsa_overlay_to_child(src, nm);
                     } else {
-                        win->clear_vsa_overlay();
+                        win->overlays().clear_vsa_overlay();
                     }
                 };
 
@@ -582,7 +587,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                     s.settling = false;
                     s.close_requested = false;
                     if (close_after) open = false;
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 } else if (!s.settling) {
                     // Pull the absolute last snapshot in case we missed one
                     // between the last poll and the worker finishing.
@@ -590,12 +595,14 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                     if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                         win)
                     {
-                        win->update_vsa_cluster_overlay(snap.face_proxy_ids);
+                        win->overlays().update_vsa_cluster_overlay(snap.face_proxy_ids);
                     }
                     s.runner.copy_error_if_any(s.last_error);
                     s.last_stats = s.runner.debug_stats();
                     s.last_stats_valid = true;
                     s.last_proxy_count = s.last_stats.final_proxies;
+                    if (win)
+                        win->algorithm_controller().mark_final_preview_holding();
                     s.settling = true;
                     s.settle_started_at = ImGui::GetTime();
                     ImGui::TextColored(claw_ui::status_success_color(),
@@ -611,7 +618,7 @@ void renderDialogVSA(ViewportCanvas* viewer, VSAState& s, bool& open) {
                         s.runner.reset();
                         s.settling = false;
                         s.close_requested = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else {
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Done. Holding cluster view %.1fs / %.1fs ...",

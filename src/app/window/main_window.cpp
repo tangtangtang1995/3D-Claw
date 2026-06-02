@@ -6,6 +6,7 @@
 // under the GNU General Public License v3. See the root LICENSE file.
 
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "ui/walk_through.h"
 
 // AI Chat panel rendering + markdown helpers + send_ai_request moved to
@@ -21,12 +22,21 @@ MainWindow* MainWindow::s_instance_ = nullptr;
 MainWindow::MainWindow() {
     s_instance_ = this;
     walk_through_ = std::make_unique<WalkThrough>(viewer_.camera());
+    overlays_ = std::make_unique<OverlayController>(viewer_, selection_manager_);
 }
 
 MainWindow::~MainWindow() {
     st_3dgen_.stop_worker();
     algorithm_.join_worker();
     file_loader_.join_worker();
+}
+
+OverlayController& MainWindow::overlays() {
+    return *overlays_;
+}
+
+const OverlayController& MainWindow::overlays() const {
+    return *overlays_;
 }
 
 void MainWindow::render() {
@@ -47,7 +57,7 @@ void MainWindow::render() {
     handle_global_keyboard_shortcuts();
 
     viewer_.render();
-    update_selection_overlays();
+    overlays_->update_selection_overlays();
     if (do_upload_this_frame)
         file_loader_.finish_upload();
 

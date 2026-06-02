@@ -12,8 +12,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(CLAW3D_ENABLE_CGAL "Enable 3D Claw CGAL visual algorithm modules" ON)
-option(CLAW3D_ENABLE_LAYERING_CHECK
-    "Run the src layering guard before building the 3D Claw executable" OFF)
 option(CLAW3D_BUILD_TESTS "Build 3D Claw test executables" OFF)
 set(CLAW3D_EASY3D_RESOURCE_DIR
     ""

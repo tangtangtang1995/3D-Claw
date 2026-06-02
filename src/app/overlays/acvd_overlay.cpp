@@ -5,7 +5,7 @@
 // application. 3D Claw links Easy3D and CGAL (both GPLv3) and is distributed
 // under the GNU General Public License v3. See the root LICENSE file.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <vector>
 
-void MainWindow::init_acvd_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_acvd_overlay(easy3d::SurfaceMesh* src) {
     auto& state = algorithm_overlay_.acvd;
     clear_acvd_overlay();
     if (!src) return;
@@ -37,7 +37,7 @@ void MainWindow::init_acvd_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_acvd_cluster_overlay(
+void OverlayController::update_acvd_cluster_overlay(
     const std::vector<ACVD_Point3d>& verts,
     const std::vector<ACVD_Triangle>& tris,
     const std::vector<int>& face_cluster_ids)
@@ -93,7 +93,7 @@ void MainWindow::update_acvd_cluster_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_acvd_seed_overlay(
+void OverlayController::update_acvd_seed_overlay(
     const std::vector<ACVD_Point3d>& seeds)
 {
     auto& state = algorithm_overlay_.acvd;
@@ -123,7 +123,7 @@ void MainWindow::update_acvd_seed_overlay(
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_acvd_overlay() {
+void OverlayController::clear_acvd_overlay() {
     auto& state = algorithm_overlay_.acvd;
     delete_model_if_live(viewer_, state.cluster_mesh);
     delete_model_if_live(viewer_, state.seed_graph);

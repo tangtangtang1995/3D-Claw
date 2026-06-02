@@ -9,6 +9,7 @@
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "services/operations/easy3d_model_operations.h"
+#include "ui/colormap.h"
 #include "ui/layout_helpers.h"
 #include "viewport/viewport_canvas.h"
 
@@ -80,7 +81,7 @@ void renderDialogPointCloudMeshDistance(ViewportCanvas* viewer, PointCloudMeshDi
             float bar_h = 18;
             for (int i = 0; i < (int)bar_w; i++)
                 dl->AddRectFilled(ImVec2(pos.x + i, pos.y), ImVec2(pos.x + i + 1, pos.y + bar_h),
-                                  colormap_color((float)i / bar_w));
+                                  claw_ui::colormap_color((float)i / bar_w));
             ImGui::Dummy(ImVec2(bar_w, bar_h + 2));
             ImGui::TextDisabled("0");
             claw_ui::same_line_right_if_fits_text("0000.0000");
@@ -227,7 +228,7 @@ void renderDialogPointCloudPointCloudDistance(ViewportCanvas* viewer, PointCloud
             float bar_h = 18;
             for (int i = 0; i < (int)bar_w; i++)
                 dl->AddRectFilled(ImVec2(pos.x + i, pos.y), ImVec2(pos.x + i + 1, pos.y + bar_h),
-                                  colormap_color((float)i / bar_w));
+                                  claw_ui::colormap_color((float)i / bar_w));
             ImGui::Dummy(ImVec2(bar_w, bar_h + 2));
             ImGui::TextDisabled("0");
             claw_ui::same_line_right_if_fits_text("0000.0000");

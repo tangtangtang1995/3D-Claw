@@ -8,7 +8,7 @@
 #ifndef CLAW3D_ALGORITHM_CONTROLLER_H
 #define CLAW3D_ALGORITHM_CONTROLLER_H
 
-/// App/service boundary object that owns asynchronous algorithm lifecycles.
+/// App/service boundary objects that own asynchronous algorithm lifecycles.
 
 #include "common/model_handle.h"
 #include "services/core/algorithm_id.h"
@@ -22,9 +22,51 @@
 #include <thread>
 #include <vector>
 
+/// Coarse lifecycle shared by every asynchronous algorithm job.
+enum class AlgorithmJobState {
+    Idle,
+    Starting,
+    Running,
+    WorkerFinished,
+    FlushingPreview,
+    HoldingFinalPreview,
+    AwaitingUiCommit,
+    Completed,
+    Cancelling,
+    Cancelled,
+    Failed,
+};
+
+/// Describes which generic lifecycle gates a concrete job needs.
+struct AlgorithmCompletionPolicy {
+    bool requires_preview_flush = false;
+    bool requires_final_preview_hold = false;
+    bool requires_ui_commit = true;
+
+    static AlgorithmCompletionPolicy immediate();
+    static AlgorithmCompletionPolicy preview_flush();
+    static AlgorithmCompletionPolicy final_preview_hold();
+};
+
+const char* algorithm_job_state_label(AlgorithmJobState state);
+
+/// Minimal polymorphic lifecycle interface shared by all algorithm jobs.
+/// Algorithm-specific params, preview events, results, and stats stay typed.
+class AlgorithmJobLifecycle {
+public:
+    virtual ~AlgorithmJobLifecycle() = default;
+
+    virtual AlgorithmId algorithm_id() const = 0;
+    virtual AlgorithmJobState state() const = 0;
+    virtual AlgorithmCompletionPolicy completion_policy() const = 0;
+    virtual void request_cancel() = 0;
+    virtual bool worker_finished() const = 0;
+    virtual bool ready_for_ui_commit() const = 0;
+};
+
 /// Coordinates the lifecycle of one active backend algorithm job.
 /// Owns worker completion state and transfers produced models back to the UI.
-class AlgorithmController {
+class AlgorithmController : public AlgorithmJobLifecycle {
 public:
     ~AlgorithmController();
     AlgorithmController() = default;
@@ -44,9 +86,15 @@ public:
 
     bool is_running() const;
     bool is_running_id(AlgorithmId expected_id) const;
+    AlgorithmId algorithm_id() const override;
     AlgorithmId current_id() const;
     std::string current_label() const;
     ModelHandle current_source_handle() const;
+    AlgorithmJobState state() const override;
+    const char* state_label() const;
+    AlgorithmCompletionPolicy completion_policy() const override;
+    bool worker_finished() const override;
+    bool ready_for_ui_commit() const override;
     bool has_quality_context() const;
     bool has_quality_context_for(AlgorithmId expected_id) const;
     std::string take_quality_context();
@@ -55,8 +103,17 @@ public:
     void begin(AlgorithmId id,
                const std::string& label,
                const ModelHandle& source_handle,
-               ResultDisposition disposition);
+               ResultDisposition disposition,
+               AlgorithmCompletionPolicy policy =
+                   AlgorithmCompletionPolicy::immediate());
+    void request_cancel() override;
+    void mark_worker_finished();
+    void mark_preview_flushing();
+    void mark_final_preview_holding();
+    void mark_ready_for_ui_commit();
     void mark_done();
+    void mark_cancelled();
+    void mark_failed(std::string error);
     void set_quality_context(std::string context);
     void push_owned_result(easy3d::Model* result);
     void push_result(std::unique_ptr<easy3d::Model> result);
@@ -70,9 +127,12 @@ public:
 private:
     std::atomic<bool> busy{false};
     std::atomic<bool> done{false};
+    std::atomic<AlgorithmJobState> job_state{AlgorithmJobState::Idle};
     AlgorithmId id = AlgorithmId::Unknown;
+    AlgorithmCompletionPolicy policy;
     ResultDisposition disposition = ResultDisposition::AddAsChild;
     std::string label;
+    std::string error_message;
     std::string quality_context;
     AlgorithmId completed_quality_context_id = AlgorithmId::Unknown;
     std::string completed_quality_context;

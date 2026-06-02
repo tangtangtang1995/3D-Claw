@@ -11,8 +11,10 @@
 #include "common/preview_policy.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ui/layout_helpers.h"
@@ -32,7 +34,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 // ============================================================================
 // AI helpers
@@ -205,15 +206,15 @@ void push_overlays(MainWindow* win,
         easy3d::vec3 p;
         if (vertex_position(mesh, vid, p)) src_pts.push_back(p);
     }
-    win->update_geo_source_overlay(mesh, src_pts);
+    win->overlays().update_geo_source_overlay(mesh, src_pts);
     if (s.target_valid && s.target_vid >= 0) {
         easy3d::vec3 p;
         if (vertex_position(mesh, s.target_vid, p))
-            win->update_geo_target_overlay(mesh, &p);
+            win->overlays().update_geo_target_overlay(mesh, &p);
         else
-            win->update_geo_target_overlay(mesh, nullptr);
+            win->overlays().update_geo_target_overlay(mesh, nullptr);
     } else {
-        win->update_geo_target_overlay(mesh, nullptr);
+        win->overlays().update_geo_target_overlay(mesh, nullptr);
     }
 }
 
@@ -245,7 +246,9 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
 #ifdef CLAW3D_HAS_CGAL
             if (s.exact_runner) s.exact_runner.cancel();
 #endif
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
 
         auto* viewer = win ? win->viewer() : nullptr;
@@ -266,14 +269,14 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
         static int prev_mode = -1;
         if (prev_mode != -1 && prev_mode != s.mode) {
             if (win) {
-                win->clear_front_overlay();
+                win->overlays().clear_front_overlay();
             }
         }
         prev_mode = s.mode;
 
         // Cleanup overlays when dialog closes.
         if (!open) {
-            if (win) win->clear_front_overlay();
+            if (win) win->overlays().clear_front_overlay();
             s.pick_mode = 0;
             release_geo_pick_input();
         }
@@ -526,13 +529,13 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                 GEO_FrontSnapshot snap;
                 if (s.front_runner.poll_snapshot(s.last_snap_gen, snap)) {
                     if (!snap.vertex_distances.empty() && win) {
-                        win->update_front_overlay(snap);
+                        win->overlays().update_front_overlay(snap);
                         s.last_visited      = snap.visited_vertices;
                         s.last_front_size   = snap.front_size;
                         s.last_max_distance = snap.max_distance;
                     }
                 }
-                glfwPostEmptyEvent();
+                claw3d::app::wake_event_loop();
                 ImGui::TextColored(claw_ui::status_success_color(),
                     "Front: visited %d/%d | front_size=%d | max_dist=%.4g",
                     s.last_visited, nv, s.last_front_size,
@@ -565,7 +568,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                 if (ImGui::Button("Run") && can_run) {
                     s.last_result_mode = s.mode;
                     if (win)
-                        win->clear_geo_path_overlays();
+                        win->overlays().clear_geo_path_overlays();
                     if (s.mode == GEO_MODE_FrontPropagation) {
                         s.last_stats_valid = false;
                         s.last_snap_gen = -1;
@@ -587,7 +590,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                         cfg.compare_exact_path = s.compare_exact_path;
 
                         if (s.live_preview && win)
-                            win->init_front_overlay(mesh);
+                            win->overlays().init_front_overlay(mesh);
 
                         claw3d::services::GeodesicFrontJobStart request;
                         request.source_mesh = mesh;
@@ -598,14 +601,14 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                         request.source_vertex_ids = s.sources;
                         request.config = cfg;
                         request.final_result_ready = &s.final_result_ready;
-                        request.wake_ui = []() { glfwPostEmptyEvent(); };
+                        request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                         s.front_runner =
                             claw3d::services::start_geodesic_front_job(
                                 win->algorithm_controller(), request);
                         if (!s.front_runner) {
                             if (s.live_preview && win)
-                                win->clear_front_overlay();
+                                win->overlays().clear_front_overlay();
                             s.final_result_ready.store(
                                 true, std::memory_order_release);
                             s.last_error =
@@ -635,7 +638,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                         request.path_result = &s.exact_path_result;
                         request.result_valid = &s.exact_result_valid;
                         request.final_result_ready = &s.exact_final_ready;
-                        request.wake_ui = []() { glfwPostEmptyEvent(); };
+                        request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                         s.exact_runner =
                             claw3d::services::start_geodesic_exact_path_job(
@@ -667,7 +670,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                         request.heat_variant = s.heat_variant;
                         request.result_valid = &s.exact_result_valid;
                         request.final_result_ready = &s.exact_final_ready;
-                        request.wake_ui = []() { glfwPostEmptyEvent(); };
+                        request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                         s.exact_runner =
                             claw3d::services::start_geodesic_heat_method_job(
@@ -704,7 +707,9 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
 #ifdef CLAW3D_HAS_CGAL
                     if (s.exact_runner) s.exact_runner.cancel();
 #endif
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (((s.front_runner && s.front_runner.is_cancelled())
 #ifdef CLAW3D_HAS_CGAL
@@ -732,7 +737,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                     s.front_runner.has_error();
                 if (finish_immediately) {
                     if (s.live_preview && win)
-                        win->clear_front_overlay();
+                        win->overlays().clear_front_overlay();
                     if (s.front_runner.has_error())
                         s.last_error = s.front_runner.last_error();
                     s.last_stats = s.front_runner.result_stats();
@@ -742,13 +747,13 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                     s.settling = false;
                     s.close_requested = false;
                     if (close_after) open = false;
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 } else if (!s.settling) {
                     GEO_FrontSnapshot snap;
                     if (s.front_runner.poll_snapshot(s.last_snap_gen, snap) &&
                         win && !snap.vertex_distances.empty())
                     {
-                        win->update_front_overlay(snap);
+                        win->overlays().update_front_overlay(snap);
                     }
                     if (s.front_runner.has_error())
                         s.last_error = s.front_runner.last_error();
@@ -758,13 +763,13 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                     if (s.last_stats.path_found && win) {
                         std::vector<float> xyz;
                         s.front_runner.get_front_path(xyz);
-                        win->update_geo_front_path_overlay(mesh, xyz);
+                        win->overlays().update_geo_front_path_overlay(mesh, xyz);
                     }
                     // Paint the CGAL exact path if one was found.
                     if (s.last_stats.exact_path_found && win) {
                         std::vector<float> xyz;
                         s.front_runner.get_exact_path(xyz);
-                        win->update_geo_exact_path_overlay(mesh, xyz);
+                        win->overlays().update_geo_exact_path_overlay(mesh, xyz);
                     }
                     s.settling = true;
                     s.settle_started_at = ImGui::GetTime();
@@ -776,12 +781,12 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                     const double elapsed =
                         (now - s.settle_started_at) * 1000.0;
                     if (elapsed >= s.settle_ms) {
-                        if (win) win->clear_front_overlay();
+                        if (win) win->overlays().clear_front_overlay();
                         mark_algorithm_done(win);
                         s.front_runner.reset();
                         s.settling = false;
                         s.close_requested = false;
-                        glfwPostEmptyEvent();
+                        claw3d::app::wake_event_loop();
                     } else {
                         ImGui::TextColored(claw_ui::status_success_color(),
                             "Done. Holding distance field %.1fs / %.1fs ...",
@@ -806,7 +811,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                     heat_job
                         ? "Computing Heat Method..."
                         : "Computing exact shortest path...");
-                glfwPostEmptyEvent();
+                claw3d::app::wake_event_loop();
             }
             if (exact_job_busy && s.exact_runner.is_done() &&
                 s.exact_final_ready.load(std::memory_order_acquire))
@@ -863,7 +868,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                         xyz.push_back((float)p.y);
                         xyz.push_back((float)p.z);
                     }
-                    win->update_geo_exact_path_overlay(mesh, xyz);
+                    win->overlays().update_geo_exact_path_overlay(mesh, xyz);
                     s.last_stats_valid = true;
                     s.last_stats = GEO_FrontResultStats{};
                     s.last_stats.input_vertices = nv;
@@ -879,7 +884,7 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
                 s.exact_runner.reset();
                 s.close_requested = false;
                 if (close_after) open = false;
-                glfwPostEmptyEvent();
+                claw3d::app::wake_event_loop();
             }
 #endif
 
@@ -984,7 +989,9 @@ void renderDialogGeodesicDistance(ViewportCanvas* viewer, GeodesicState& s, bool
 #ifdef CLAW3D_HAS_CGAL
                     if (s.exact_runner) s.exact_runner.cancel();
 #endif
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 } else {
                     open = false;
                 }

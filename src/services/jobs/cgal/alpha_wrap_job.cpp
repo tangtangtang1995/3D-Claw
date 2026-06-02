@@ -135,7 +135,10 @@ AlphaWrapJobHandle start_alpha_wrap_job(
     controller.begin(AlgorithmId::AlphaWrap3D,
                      "Alpha Wrapping 3D",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     request.live_preview
+                         ? AlgorithmCompletionPolicy::preview_flush()
+                         : AlgorithmCompletionPolicy::immediate());
 
     controller.start_worker(std::thread(
         [&controller,

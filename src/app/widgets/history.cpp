@@ -8,7 +8,7 @@
 #include "widgets/imgui_widgets.h"
 
 #include "ai/ai_explainable_item.h"
-#include "model/operation_history.h"
+#include "history/operation_history.h"
 #include "ui/layout_helpers.h"
 
 #include <cstdio>

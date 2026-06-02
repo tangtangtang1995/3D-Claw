@@ -11,10 +11,7 @@
 
 #include <easy3d/renderer/opengl.h>
 #include <easy3d/renderer/opengl_error.h>
-#include <3rd_party/stb/stb_image_write.h>
-#include <3rd_party/stb/stb_image.h>
 
-#include <easy3d/core/point_cloud.h>
 #include <easy3d/renderer/camera.h>
 #include <easy3d/renderer/drawable_lines.h>
 #include <easy3d/renderer/drawable_points.h>
@@ -27,11 +24,10 @@
 
 #include "ui/walk_through.h"
 
-#include <GLFW/glfw3.h>
+#include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
-
-#include "imgui.h"
 
 namespace {
 
@@ -89,24 +85,6 @@ void draw_background_gradient(int width,
 }
 
 } // namespace
-
-
-ImU32 colormap_color(float t) {
-    static unsigned char* cmap = nullptr;
-    static int cmap_w = 0, cmap_h = 0;
-    if (!cmap) {
-        std::string path = claw3d::resources::easy3d_resource_path(
-            "colormaps/default.png");
-        int ch;
-        cmap = stbi_load(path.c_str(), &cmap_w, &cmap_h, &ch, 4);
-    }
-    if (!cmap || cmap_w <= 0) return IM_COL32(128, 128, 128, 255);
-    t = t < 0 ? 0 : (t > 1 ? 1 : t);
-    const int x = static_cast<int>(t * (cmap_w - 1));
-    const int y = cmap_h / 2;
-    const int idx = (y * cmap_w + x) * 4;
-    return IM_COL32(cmap[idx], cmap[idx+1], cmap[idx+2], cmap[idx+3]);
-}
 
 
 void ViewportCanvas::init_opengl() {
@@ -182,6 +160,19 @@ void ViewportCanvas::set_background_color(const easy3d::vec4& c) {
     glClearColor(c[0], c[1], c[2], c[3]);
 }
 
+void ViewportCanvas::run_with_panel_gl_viewport(
+        int width, int height, const std::function<void()>& callback) {
+    if (!callback)
+        return;
+
+    GLint previous_viewport[4];
+    glGetIntegerv(GL_VIEWPORT, previous_viewport);
+    glViewport(0, 0, width, height);
+    callback();
+    glViewport(previous_viewport[0], previous_viewport[1],
+               previous_viewport[2], previous_viewport[3]);
+}
+
 
 void ViewportCanvas::pre_draw() {
     glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -244,18 +235,23 @@ void ViewportCanvas::draw_scene() {
 void ViewportCanvas::post_draw() {
     if (show_frame_rate_ && texter_ && texter_->num_fonts() >= 2) {
         static int fps_count = 0;
-        static double last_time = 0.0;
+        static std::chrono::steady_clock::time_point last_time;
+        static bool has_last_time = false;
         static double fps = 0.0;
         static std::string fps_str = "fps: ??";
         if (++fps_count == 40) {
-            double now = glfwGetTime();
-            if (last_time > 0) {
-                fps = 40.0 / (now - last_time);
+            const auto now = std::chrono::steady_clock::now();
+            if (has_last_time) {
+                const double elapsed =
+                    std::chrono::duration<double>(now - last_time).count();
+                if (elapsed > 0.0)
+                    fps = 40.0 / elapsed;
                 char buf[32];
                 snprintf(buf, sizeof(buf), "fps: %.0f", fps);
                 fps_str = buf;
             }
             last_time = now;
+            has_last_time = true;
             fps_count = 0;
         }
         texter_->draw(fps_str, 20.0f * dpi_scaling_, 50.0f * dpi_scaling_, 16, 1);
@@ -265,150 +261,47 @@ void ViewportCanvas::post_draw() {
 }
 
 
-void ViewportCanvas::render() {
+std::uintptr_t ViewportCanvas::render_scene_texture(int width, int height) {
     if (!opengl_initialized_)
         init_opengl();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
+    if (width <= 0) width = 1;
+    if (height <= 0) height = 1;
 
-    viewport_hovered_ = ImGui::IsWindowHovered();
-    viewport_focused_ = ImGui::IsWindowFocused();
-
-    ImVec2 size = ImGui::GetContentRegionAvail();
-    int w = static_cast<int>(size.x);
-    int h = static_cast<int>(size.y);
-    if (w <= 0) w = 1;
-    if (h <= 0) h = 1;
-
-    if (w != fbo_width_ || h != fbo_height_) {
-        create_fbo(w, h);
+    if (width != fbo_width_ || height != fbo_height_) {
+        create_fbo(width, height);
         dirty_ = true;
     }
 
-    camera_->setScreenWidthAndHeight(w, h);
+    camera_->setScreenWidthAndHeight(width, height);
 
-    if (fbo_) {
-        handle_input();
+    if (!fbo_)
+        return 0;
 
-        if (walk_through_ && walk_through_->interpolator()->is_interpolation_started())
-            dirty_ = true;
-
-        if (dirty_) {
-            GLint prev_fbo = 0;
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
-            GLint prev_viewport[4];
-            glGetIntegerv(GL_VIEWPORT, prev_viewport);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-            glViewport(0, 0, fbo_width_, fbo_height_);
-
-            pre_draw();
-            draw_scene();
-            post_draw();
-
-            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo));
-            glViewport(prev_viewport[0], prev_viewport[1], prev_viewport[2], prev_viewport[3]);
-
-            dirty_ = false;
-        }
-
-        ImGui::Image((ImTextureID)(intptr_t)fbo_texture_, size, ImVec2(0, 1), ImVec2(1, 0));
-        viewport_min_x_ = ImGui::GetItemRectMin().x;
-        viewport_min_y_ = ImGui::GetItemRectMin().y;
-        viewport_max_x_ = ImGui::GetItemRectMax().x;
-        viewport_max_y_ = ImGui::GetItemRectMax().y;
-
-        draw_axes_gizmo();
-
-        if (!models_.empty()) {
-            auto* m = current_model();
-            if (m) {
-                auto* pc = dynamic_cast<easy3d::PointCloud*>(m);
-                if (pc) {
-                    auto dist = pc->get_vertex_property<float>("v:dist");
-                    auto drawable = pc->renderer()->get_points_drawable("vertices");
-                    if (dist && drawable && drawable->coloring_method() == easy3d::State::SCALAR_FIELD) {
-                        float dmin = 1e30f, dmax = -1e30f;
-                        for (auto v : pc->vertices()) {
-                            float d = dist[v];
-                            if (d < dmin) dmin = d;
-                            if (d > dmax) dmax = d;
-                        }
-                        if (dmax - dmin < 1e-6f) dmax = dmin + 1e-6f;
-
-                        ImVec2 vp = ImGui::GetWindowPos();
-                        ImVec2 vs = ImGui::GetWindowSize();
-                        float bar_w = 18, bar_x = vp.x + vs.x - bar_w - 22;
-                        float bar_h = (vs.y - 80) / 3.0f;
-                        float bar_top = vp.y + 40;
-                        float bar_bottom = bar_top + bar_h;
-
-                        ImDrawList* dl = ImGui::GetForegroundDrawList();
-
-                        dl->AddRectFilled(ImVec2(bar_x - 2, bar_top - 12), ImVec2(bar_x + bar_w + 38, bar_bottom + 8),
-                            IM_COL32(0,0,0,160), 4.0f);
-
-                        int nbins = 60;
-                        std::vector<int> bins(nbins, 0);
-                        for (auto v : pc->vertices()) {
-                            const int bi = static_cast<int>(
-                                (dist[v] - dmin) / (dmax - dmin) *
-                                (nbins - 1));
-                            if (bi >= 0 && bi < nbins) bins[bi]++;
-                        }
-                        int max_count = 1;
-                        for (int c : bins) if (c > max_count) max_count = c;
-
-                        float hist_w = 30, hist_max_h = bar_h;
-                        for (int i = 0; i < nbins; i++) {
-                            const float hh = (max_count > 0)
-                                ? (static_cast<float>(bins[i]) / max_count *
-                                   hist_max_h)
-                                : 0.0f;
-                            float y = bar_bottom - hh;
-                            float x = bar_x - hist_w - 4;
-                            const float bx =
-                                x + static_cast<float>(i) / nbins * hist_w;
-                            const float bw = hist_w / static_cast<float>(nbins);
-                            const float t =
-                                static_cast<float>(i) / (nbins - 1);
-                            ImU32 col = colormap_color(t);
-                            col = IM_COL32((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 200);
-                            dl->AddRectFilled(ImVec2(bx, y), ImVec2(bx + bw, bar_bottom), col);
-                        }
-
-                        for (int i = 0; i < static_cast<int>(bar_h); i++) {
-                            const float t =
-                                1.0f - static_cast<float>(i) / bar_h;
-                            dl->AddRectFilled(ImVec2(bar_x, bar_top + i), ImVec2(bar_x + bar_w, bar_top + i + 1),
-                                colormap_color(t));
-                        }
-
-                        char buf[32];
-                        snprintf(buf, sizeof(buf), "%.4f", dmax);
-                        dl->AddText(ImVec2(bar_x + bar_w + 4, bar_top - 4), IM_COL32(255,255,255,200), buf);
-                        snprintf(buf, sizeof(buf), "%.4f", dmin);
-                        dl->AddText(ImVec2(bar_x + bar_w + 4, bar_bottom - 10), IM_COL32(255,255,255,200), buf);
-                    }
-                }
-            }
-        }
-    }
-
-    if (rect_dragging_) {
-        ImDrawList* dl = ImGui::GetForegroundDrawList();
-        ImVec2 r_min(rect_start_x_ < rect_end_x_ ? rect_start_x_ : rect_end_x_,
-                      rect_start_y_ < rect_end_y_ ? rect_start_y_ : rect_end_y_);
-        ImVec2 r_max(rect_start_x_ < rect_end_x_ ? rect_end_x_ : rect_start_x_,
-                      rect_start_y_ < rect_end_y_ ? rect_end_y_ : rect_start_y_);
-        dl->AddRectFilled(r_min, r_max, IM_COL32(255, 220, 50, 50));
-        dl->AddRect(r_min, r_max, IM_COL32(255, 220, 50, 200), 0.0f, 0, 1.5f);
-    }
+    handle_input();
 
     if (walk_through_ && walk_through_->interpolator()->is_interpolation_started())
         dirty_ = true;
 
-    ImGui::End();
-    ImGui::PopStyleVar();
+    if (dirty_) {
+        GLint prev_fbo = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+        GLint prev_viewport[4];
+        glGetIntegerv(GL_VIEWPORT, prev_viewport);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+        glViewport(0, 0, fbo_width_, fbo_height_);
+
+        pre_draw();
+        draw_scene();
+        post_draw();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo));
+        glViewport(prev_viewport[0], prev_viewport[1],
+                   prev_viewport[2], prev_viewport[3]);
+
+        dirty_ = false;
+    }
+
+    return static_cast<std::uintptr_t>(fbo_texture_);
 }

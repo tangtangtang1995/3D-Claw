@@ -11,9 +11,11 @@
 #include "common/preview_policy.h"
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/cgal_simplification_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/mesh_ai_stats.h"
@@ -33,7 +35,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 // ============================================================================
 // AI prompt text is kept ASCII-only for predictable cross-platform rendering.
@@ -448,11 +449,11 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
             if (s.runner && busy && s.live_preview) {
                 std::vector<SIMPL_FrameEvent> events;
                 if (s.runner.drain_live_events(events)) {
-                    std::vector<MainWindow::SimplTrailEntry> trail_new;
+                    std::vector<SimplTrailEntry> trail_new;
                     trail_new.reserve(events.size());
                     for (const auto& ev : events) {
                         if (ev.type == SIMPL_FrameEvent::Collapsing) {
-                            MainWindow::SimplTrailEntry e;
+                            SimplTrailEntry e;
                             e.p0        = easy3d::vec3((float)ev.p0[0],
                                                        (float)ev.p0[1],
                                                        (float)ev.p0[2]);
@@ -474,7 +475,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                                 slow_preview_ms);
                         }
                         if (update_trail)
-                            win->update_simpl_overlay(trail_new);
+                            win->overlays().update_simpl_overlay(trail_new);
                     }
                 }
 
@@ -495,7 +496,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                         s.pending_snapshots.push_back(std::move(frame));
                     } else {
                         s.pending_snapshots.clear();
-                        if (win) win->update_simpl_snapshot_mesh(
+                        if (win) win->overlays().update_simpl_snapshot_mesh(
                             snap_v, snap_t, 1.0f);
                     }
                 }
@@ -508,7 +509,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                     {
                         auto frame = std::move(s.pending_snapshots.front());
                         s.pending_snapshots.pop_front();
-                        if (win) win->update_simpl_snapshot_mesh(
+                        if (win) win->overlays().update_simpl_snapshot_mesh(
                             frame.verts, frame.tris, 1.0f);
                     }
                 }
@@ -641,7 +642,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                     // collapse trail. clear_simpl_overlay() runs on completion
                     // (see below) to restore opacity.
                     if (s.live_preview && win)
-                        win->init_simpl_overlay(mesh);
+                        win->overlays().init_simpl_overlay(mesh);
 
                     claw3d::services::CgalSimplificationJobStart request;
                     request.source_mesh = mesh;
@@ -652,7 +653,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                     request.config = cfg;
                     request.source_name = mesh->name();
                     request.final_result_ready = &s.final_result_ready;
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     if (win) {
                         s.runner =
@@ -663,7 +664,7 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                     }
                     if (!s.runner) {
                         if (s.live_preview && win)
-                            win->clear_simpl_overlay();
+                            win->overlays().clear_simpl_overlay();
                         s.final_result_ready.store(true,
                             std::memory_order_release);
                         LOG(WARNING) << "Failed to start CGAL simplification job";
@@ -693,6 +694,8 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                 if (s.runner) {
                     if (ImGui::Button("Cancel")) {
                         s.runner.cancel();
+                        if (win)
+                            win->algorithm_controller().request_cancel();
                     }
                 }
             }
@@ -712,14 +715,16 @@ void renderDialogCGALSimplification(ViewportCanvas* viewer,
                     claw_ui::frame_waiting(
                         now, s.last_snapshot_display_time, slow_preview_ms);
                 if (slow_playback_pending || slow_playback_hold) {
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().mark_preview_flushing();
+                    claw3d::app::wake_event_loop();
                 } else {
                     s.last_stats       = s.runner.debug_stats();
                     s.last_stats_valid = true;
                     // Tear down the live overlay (collapse trail + source ghost)
                     // before completion runs; completion then hides the source
                     // entirely and adds the simplified-mesh child.
-                    if (win) win->clear_simpl_overlay();
+                    if (win) win->overlays().clear_simpl_overlay();
                     mark_algorithm_done(win);
                     s.pending_snapshots.clear();
                     s.last_snapshot_display_time = 0.0;

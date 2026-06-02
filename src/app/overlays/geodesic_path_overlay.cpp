@@ -7,7 +7,7 @@
 
 // Geodesic path polyline overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -42,7 +42,7 @@ easy3d::Graph* build_path_graph(const std::vector<float>& xyz_flat,
 }
 } // namespace
 
-void MainWindow::update_geo_front_path_overlay(easy3d::SurfaceMesh* source,
+void OverlayController::update_geo_front_path_overlay(easy3d::SurfaceMesh* source,
     const std::vector<float>& xyz_flat)
 {
     if (interaction_overlay_.geodesic_front_path &&
@@ -75,7 +75,7 @@ void MainWindow::update_geo_front_path_overlay(easy3d::SurfaceMesh* source,
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_geo_exact_path_overlay(easy3d::SurfaceMesh* source,
+void OverlayController::update_geo_exact_path_overlay(easy3d::SurfaceMesh* source,
     const std::vector<float>& xyz_flat)
 {
     if (interaction_overlay_.geodesic_exact_path &&
@@ -108,7 +108,7 @@ void MainWindow::update_geo_exact_path_overlay(easy3d::SurfaceMesh* source,
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_geo_path_overlays() {
+void OverlayController::clear_geo_path_overlays() {
     delete_model_if_live(viewer_, interaction_overlay_.geodesic_front_path);
     delete_model_if_live(viewer_, interaction_overlay_.geodesic_exact_path);
     viewer_.mark_dirty();

@@ -40,15 +40,18 @@ set(CLAW3D_APP_HEADERS
     ../common/simplification_contract.h
     ../common/smoothing_contract.h
     ../common/vsa_contract.h
-    model/model_health.h
     ui/panel_help.h
+    ui/colormap.h
     ui/layout_helpers.h
     ui/status_widgets.h
+    platform/clipboard.h
+    platform/runtime_probe.h
+    platform/window_events.h
     selection/selection_manager.h
     dialogs/crop_dialog.h
     dialogs/align_dialog.h
     dialogs/animation_dialog.h
-    model/operation_history.h
+    history/operation_history.h
     ui/ui_scale.h
     ui/ui_frame_gate.h
     dialogs/prerequisites.h
@@ -59,6 +62,9 @@ set(CLAW3D_APP_HEADERS
     ai/ai_prompt_utils.h
     ai/mesh_ai_stats.h
     overlays/overlay_utils.h
+    overlays/overlay_controller.h
+    overlays/overlay_palette.h
+    overlays/region_growing_overlay_types.h
     overlays/algorithm_overlay_state.h
     overlays/interaction_overlay_state.h
     window/window_helpers.h
@@ -78,6 +84,7 @@ set(CLAW3D_APP_SOURCES
     viewport/models.cpp
     viewport/axes.cpp
     viewport/render.cpp
+    viewport/viewport_panel.cpp
     viewport/selection_bbox.cpp
     viewport/lifecycle.cpp
     viewport/input.cpp
@@ -114,7 +121,11 @@ set(CLAW3D_APP_SOURCES
     widgets/health_report.cpp
     widgets/history.cpp
     widgets/settings.cpp
+    ui/colormap.cpp
     ui/walk_through.cpp
+    platform/clipboard.cpp
+    platform/runtime_probe.cpp
+    platform/window_events.cpp
     ai/ai_chat.cpp
     ai/ai_context.cpp
     ui/panel_help.cpp
@@ -122,7 +133,7 @@ set(CLAW3D_APP_SOURCES
     dialogs/crop_dialog.cpp
     dialogs/align_dialog.cpp
     dialogs/animation_dialog.cpp
-    model/operation_history.cpp
+    history/operation_history.cpp
     ui/ui_scale.cpp
     dialogs/prerequisites.cpp
     util/thread_priority.cpp
@@ -133,6 +144,7 @@ set(CLAW3D_APP_SOURCES
     ai/ai_prompt_utils.cpp
     ai/mesh_ai_stats.cpp
     overlays/overlay_utils.cpp
+    overlays/overlay_controller.cpp
     window/file_actions.cpp
     window/ai_chat_panel.cpp
     window/algorithm_results.cpp

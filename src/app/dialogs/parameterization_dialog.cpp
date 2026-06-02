@@ -11,6 +11,7 @@
 #include "ai/ai_language.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/parameterization_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
@@ -18,7 +19,6 @@
 #include "ai/ai_chat.h"
 #include "ui/layout_helpers.h"
 
-#include <easy3d/renderer/opengl.h> // must be before GLFW
 #include <easy3d/core/surface_mesh.h>
 #include <easy3d/gui/picker_surface_mesh.h>
 #include <easy3d/renderer/camera.h>
@@ -38,7 +38,6 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 static const char* PARAM_HELP_PROMPT =
     "I am using CGAL LSCM (Least Squares Conformal Maps) UV parameterization "
@@ -976,7 +975,9 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
 
         static bool uv_view_open = false;
@@ -1284,7 +1285,7 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
                     request.config = cfg;
                     request.seam_paths = std::move(seam_paths);
                     request.final_result_ready = &s.final_result_ready;
-                    request.wake_ui = []() { glfwPostEmptyEvent(); };
+                    request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                     if (win) {
                         s.runner =
@@ -1307,7 +1308,9 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
                     s.algorithm == PARAM_ALGO_ARAP ? "ARAP" : "LSCM");
                 if (ImGui::Button("Cancel")) {
                     s.runner.cancel();
-                    glfwPostEmptyEvent();
+                    if (win)
+                        win->algorithm_controller().request_cancel();
+                    claw3d::app::wake_event_loop();
                 }
                 if (s.runner && s.runner.is_cancelled()) {
                     claw_ui::same_line_if_fits_text("Cancel requested...");
@@ -1358,7 +1361,7 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
                         s.arap_live_snapshot_count);
                     if (uv_view_open)
                         render_uv_view("UV View", s, uv_view_open, mesh);
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 }
             }
 
@@ -1603,19 +1606,16 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
                                            viewer->viewport_min_x());
                     const int vp_h = (int)(viewer->viewport_max_y() -
                                            viewer->viewport_min_y());
-                    GLint prev_gl_vp[4];
-                    glGetIntegerv(GL_VIEWPORT, prev_gl_vp);
-                    glViewport(0, 0, vp_w, vp_h);
-                    easy3d::SurfaceMeshPicker picker(viewer->camera());
-                    auto face = picker.pick_face(mesh, (int)local_x, (int)local_y);
                     int picked_vid = -1;
-                    if (face.is_valid()) {
-                        auto pt = picker.picked_point(mesh, face,
-                                                       (int)local_x, (int)local_y);
-                        picked_vid = nearest_face_vertex(mesh, face, pt);
-                    }
-                    glViewport(prev_gl_vp[0], prev_gl_vp[1],
-                               prev_gl_vp[2], prev_gl_vp[3]);
+                    viewer->run_with_panel_gl_viewport(vp_w, vp_h, [&]() {
+                        easy3d::SurfaceMeshPicker picker(viewer->camera());
+                        auto face = picker.pick_face(mesh, (int)local_x, (int)local_y);
+                        if (face.is_valid()) {
+                            auto pt = picker.picked_point(mesh, face,
+                                                           (int)local_x, (int)local_y);
+                            picked_vid = nearest_face_vertex(mesh, face, pt);
+                        }
+                    });
                     if (picked_vid >= 0) {
                         if (s.seam_pick_mode == 1) {
                             s.seam_pending_start = picked_vid;
@@ -1638,10 +1638,9 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
 
             // Handle 3D viewport pick click (one-shot, when pick_mode==1).
             // ViewportCanvas now keeps the Camera screen in sync with the
-            // FBO, so we just need to match the GL viewport during picking --
-            // the picker reads glGetIntegerv(GL_VIEWPORT) to size its internal
-            // FBO and scale screen-to-OpenGL, and outside this block that
-            // viewport is the whole window, not the 3D panel.
+            // FBO, so we just need to match the GL viewport during picking.
+            // ViewportCanvas owns that OpenGL scope so this UI panel does not
+            // depend on OpenGL headers.
             if (s.last_result_valid &&
                 s.last_result.error_code == PARAM_ERR_None &&
                 s.pick_mode == 1 && !busy && viewer)
@@ -1656,21 +1655,21 @@ void renderDialogParameterization(ViewportCanvas* viewer, ParameterizationState&
                                            viewer->viewport_min_x());
                     const int vp_h = (int)(viewer->viewport_max_y() -
                                            viewer->viewport_min_y());
-                    GLint prev_gl_vp[4];
-                    glGetIntegerv(GL_VIEWPORT, prev_gl_vp);
-                    glViewport(0, 0, vp_w, vp_h);
-                    easy3d::SurfaceMeshPicker picker(viewer->camera());
-                    auto face = picker.pick_face(mesh, (int)local_x, (int)local_y);
-                    if (face.is_valid()) {
-                        auto pt = picker.picked_point(mesh, face,
-                                                       (int)local_x, (int)local_y);
-                        apply_3d_pick(s, mesh, face, pt);
-                    } else {
+                    bool picked_face = false;
+                    viewer->run_with_panel_gl_viewport(vp_w, vp_h, [&]() {
+                        easy3d::SurfaceMeshPicker picker(viewer->camera());
+                        auto face = picker.pick_face(mesh, (int)local_x, (int)local_y);
+                        if (face.is_valid()) {
+                            auto pt = picker.picked_point(mesh, face,
+                                                           (int)local_x, (int)local_y);
+                            apply_3d_pick(s, mesh, face, pt);
+                            picked_face = true;
+                        }
+                    });
+                    if (!picked_face) {
                         std::snprintf(s.pick_status, sizeof(s.pick_status),
                             "No face under cursor -- click on the mesh");
                     }
-                    glViewport(prev_gl_vp[0], prev_gl_vp[1],
-                               prev_gl_vp[2], prev_gl_vp[3]);
                     s.pick_mode = 0;
                     release_param_pick_input();
                 } else if (clicked && !in_vp) {

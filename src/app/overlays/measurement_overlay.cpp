@@ -9,7 +9,7 @@
 // Keeps finalized measurement groups and the current in-progress group as
 // a child Graph under the measured model.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "viewport/viewport_canvas.h"
 #include "dialogs/measurement_dialog.h"
 #include "overlays/overlay_utils.h"
@@ -22,7 +22,7 @@
 #include <vector>
 
 
-void MainWindow::update_measurement_overlay(const MeasurementState& s) {
+void OverlayController::update_measurement_overlay(const MeasurementState& s) {
     easy3d::Model* source = nullptr;
     if (interaction_overlay_.measurement &&
         model_is_live(viewer_, interaction_overlay_.measurement)) {
@@ -90,6 +90,6 @@ void MainWindow::update_measurement_overlay(const MeasurementState& s) {
 }
 
 
-void MainWindow::clear_measurement_overlay() {
+void OverlayController::clear_measurement_overlay() {
     delete_model_if_live(viewer_, interaction_overlay_.measurement);
 }

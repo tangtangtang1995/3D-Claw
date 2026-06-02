@@ -10,9 +10,11 @@
 #include "dialogs/prerequisites.h"
 #include "ai/ai_prompt_utils.h"
 #include "ai/mesh_ai_stats.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/mcf_skeletonization_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ui/layout_helpers.h"
@@ -31,8 +33,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <GLFW/glfw3.h>
 
 static const char* MCF_HELP_PROMPT =
     "I am using CGAL Mean Curvature Flow Skeletonization in 3D Claw.\n\n"
@@ -194,7 +194,9 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
             open = true;
             s.close_requested = true;
             s.runner.cancel();
-            glfwPostEmptyEvent();
+            if (win)
+                win->algorithm_controller().request_cancel();
+            claw3d::app::wake_event_loop();
         }
         auto* viewer = win ? win->viewer() : nullptr;
         easy3d::SurfaceMesh* mesh = nullptr;
@@ -398,16 +400,16 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
             const auto& r = s.last_result;
             if (corr_changed) {
                 if (s.show_correspondence && !r.correspondence_lines.empty())
-                    win->update_mcf_correspondence_overlay(r.correspondence_lines);
+                    win->overlays().update_mcf_correspondence_overlay(r.correspondence_lines);
                 else
-                    win->clear_mcf_correspondence_overlay();
+                    win->overlays().clear_mcf_correspondence_overlay();
                 viewer->mark_dirty();
             }
             if (sdf_changed && mesh) {
                 if (s.show_sdf_heatmap && !r.sdf_per_input_vertex.empty())
-                    win->paint_mcf_sdf_on_source(mesh, r.sdf_per_input_vertex, true);
+                    win->overlays().paint_mcf_sdf_on_source(mesh, r.sdf_per_input_vertex, true);
                 else
-                    win->paint_mcf_sdf_on_source(mesh, r.sdf_per_input_vertex, false);
+                    win->overlays().paint_mcf_sdf_on_source(mesh, r.sdf_per_input_vertex, false);
                 viewer->mark_dirty();
             }
         }
@@ -415,7 +417,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
             if (ghost_changed) {
                 bool handled = false;
                 if (win)
-                    handled = win->set_mcf_source_ghost_visible(
+                    handled = win->overlays().set_mcf_source_ghost_visible(
                         s.show_original_ghost);
                 if (!handled && mesh) {
                     mesh->renderer()->set_visible(s.show_original_ghost);
@@ -423,7 +425,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 }
             }
             if (meso_changed && win)
-                win->set_mcf_meso_overlay_visible(s.show_meso);
+                win->overlays().set_mcf_meso_overlay_visible(s.show_meso);
             if (skel_changed && mesh) {
                 const std::string skel_name = strip_mesh_ext(mesh->name())
                                               + ".mcf-skeleton";
@@ -499,7 +501,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 s.settle_started_at = 0.0;
 
                 if (win && s.live_preview)
-                    win->init_mcf_overlay(mesh);
+                    win->overlays().init_mcf_overlay(mesh);
 
                 claw3d::services::McfSkeletonizationJobStart request;
                 request.source_mesh = mesh;
@@ -510,7 +512,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 request.config = cfg;
                 request.result_base_name = s.result_base_name;
                 request.final_result_ready = &s.final_result_ready;
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                 if (win) {
                     s.runner =
@@ -521,7 +523,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 }
                 if (!s.runner) {
                     if (s.live_preview)
-                        win->clear_mcf_overlay(/*restore_source=*/true);
+                        win->overlays().clear_mcf_overlay(/*restore_source=*/true);
                     s.final_result_ready.store(true,
                         std::memory_order_release);
                     s.last_error = "Failed to start MCF skeletonization job.";
@@ -537,12 +539,14 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                     !snap.vertices.empty())
                 {
-                    win->update_mcf_overlay(snap);
+                    win->overlays().update_mcf_overlay(snap);
                 }
             }
             if (s.runner && ImGui::Button("Cancel")) {
                 s.runner.cancel();
-                glfwPostEmptyEvent();
+                if (win)
+                    win->algorithm_controller().request_cancel();
+                claw3d::app::wake_event_loop();
             }
             claw_ui::same_line_if_fits_width(320.0f);
             if (s.runner) {
@@ -570,7 +574,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 // Cancel / error / close / fast-mode finish: fully restore
                 // source so nothing left over from this run.
                 if (s.live_preview && win)
-                    win->clear_mcf_overlay(/*restore_source=*/true);
+                    win->overlays().clear_mcf_overlay(/*restore_source=*/true);
                 if (s.runner.has_error())
                     s.last_error = s.runner.last_error();
                 s.runner.get_result(s.last_result);
@@ -580,7 +584,7 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 s.settling = false;
                 if (close_after) open = false;
                 s.close_requested = false;
-                glfwPostEmptyEvent();
+                claw3d::app::wake_event_loop();
             } else if (!s.settling) {
                 // Drain a final snapshot so the overlay matches the last
                 // iteration before settle locks the view.
@@ -588,12 +592,14 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 if (s.runner.poll_snapshot(s.last_snap_gen, snap) &&
                     win && !snap.vertices.empty())
                 {
-                    win->update_mcf_overlay(snap);
+                    win->overlays().update_mcf_overlay(snap);
                 }
                 if (s.runner.has_error())
                     s.last_error = s.runner.last_error();
                 s.runner.get_result(s.last_result);
                 s.last_result_valid = true;
+                if (win)
+                    win->algorithm_controller().mark_final_preview_holding();
                 s.settling = true;
                 s.settle_started_at = ImGui::GetTime();
                 ImGui::TextColored(claw_ui::status_success_color(),
@@ -605,12 +611,12 @@ void renderDialogMCFSkeletonization(ViewportCanvas* viewer,
                 if (elapsed >= s.settle_ms) {
                     // Normal end: keep source as wireframe ghost so the
                     // freshly produced skeleton stays clearly readable.
-                    if (win) win->clear_mcf_overlay(/*restore_source=*/false);
+                    if (win) win->overlays().clear_mcf_overlay(/*restore_source=*/false);
                     mark_algorithm_done(win);
                     s.runner.reset();
                     s.settling = false;
                     s.close_requested = false;
-                    glfwPostEmptyEvent();
+                    claw3d::app::wake_event_loop();
                 } else {
                     ImGui::TextColored(claw_ui::status_success_color(),
                         "Done. Holding contracted mesh %.1fs / %.1fs ...",

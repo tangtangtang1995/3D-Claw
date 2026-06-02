@@ -17,9 +17,44 @@
 #include <easy3d/util/logging.h>
 
 #include <algorithm>
+#include <sstream>
 #include <string>
 
 
+
+std::string MainWindow::current_selection_summary() {
+    auto* model = viewer_.current_model();
+    if (!model)
+        return "no current model";
+
+    std::ostringstream ss;
+    ss << "model=" << model->name();
+    bool any = false;
+    if (auto* mesh = dynamic_cast<easy3d::SurfaceMesh*>(model)) {
+        const int nf = selection_manager_.selected_count(
+            mesh, SelectionElementType::SurfaceFace);
+        const int nv = selection_manager_.selected_count(
+            mesh, SelectionElementType::SurfaceVertex);
+        if (nf > 0) {
+            ss << ", faces=" << nf;
+            any = true;
+        }
+        if (nv > 0) {
+            ss << ", vertices=" << nv;
+            any = true;
+        }
+    } else if (auto* cloud = dynamic_cast<easy3d::PointCloud*>(model)) {
+        const int np = selection_manager_.selected_count(
+            cloud, SelectionElementType::PointCloudPoint);
+        if (np > 0) {
+            ss << ", points=" << np;
+            any = true;
+        }
+    }
+    if (!any)
+        ss << ", none";
+    return ss.str();
+}
 bool MainWindow::has_current_selection() {
     auto* model = viewer_.current_model();
     if (!model)

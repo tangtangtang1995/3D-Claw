@@ -7,7 +7,7 @@
 
 // ARAP deformation live-preview overlay.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -37,7 +37,7 @@ static easy3d::vec3 arap_disp_color(double t) {
                         yellow.z + (red.z - yellow.z) * k);
 }
 
-void MainWindow::init_arap_preview_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_arap_preview_overlay(easy3d::SurfaceMesh* src) {
     auto& state = algorithm_overlay_.arap_preview;
     clear_arap_preview_overlay(/*restore_source=*/true);
     if (!src) return;
@@ -104,12 +104,12 @@ void MainWindow::init_arap_preview_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-bool MainWindow::has_arap_preview_overlay() {
+bool OverlayController::has_arap_preview_overlay() {
     auto& state = algorithm_overlay_.arap_preview;
     return state.preview_mesh && model_is_live(viewer_, state.preview_mesh);
 }
 
-void MainWindow::update_arap_preview_overlay(const ARAP_Snapshot& snap) {
+void OverlayController::update_arap_preview_overlay(const ARAP_Snapshot& snap) {
     auto& state = algorithm_overlay_.arap_preview;
     if (!state.preview_mesh || snap.vertices.empty()) return;
     if (!model_is_live(viewer_, state.preview_mesh)) {
@@ -149,7 +149,7 @@ void MainWindow::update_arap_preview_overlay(const ARAP_Snapshot& snap) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_arap_preview_overlay(bool restore_source) {
+void OverlayController::clear_arap_preview_overlay(bool restore_source) {
     auto& state = algorithm_overlay_.arap_preview;
     if (state.preview_mesh && model_is_live(viewer_, state.preview_mesh))
         viewer_.delete_model(state.preview_mesh);

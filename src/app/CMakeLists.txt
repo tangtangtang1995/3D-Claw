@@ -23,51 +23,6 @@ add_executable(${PROJECT_NAME}
     ${CLAW3D_APP_HEADERS}
     ${CLAW3D_APP_SOURCES})
 
-if(CLAW3D_ENABLE_LAYERING_CHECK)
-    set(CLAW3D_LAYERING_CHECK_ATTACHED OFF)
-    set(CLAW3D_LAYERING_CHECK_PY
-        "${CLAW3D_ROOT}/tools/check_layering.py")
-    set(CLAW3D_LAYERING_CHECK_PS1
-        "${CLAW3D_ROOT}/tools/check_layering.ps1")
-
-    if(EXISTS "${CLAW3D_LAYERING_CHECK_PY}")
-        find_package(Python3 COMPONENTS Interpreter QUIET)
-        if(Python3_EXECUTABLE)
-            add_custom_target(claw3d_layering_check
-                COMMAND "${Python3_EXECUTABLE}"
-                        "${CLAW3D_LAYERING_CHECK_PY}"
-                        --repo-root "${CLAW3D_ROOT}"
-                WORKING_DIRECTORY "${CLAW3D_ROOT}"
-                COMMENT "Checking src layering boundaries")
-            add_dependencies(${PROJECT_NAME} claw3d_layering_check)
-            set(CLAW3D_LAYERING_CHECK_ATTACHED ON)
-        endif()
-    endif()
-
-    if(NOT CLAW3D_LAYERING_CHECK_ATTACHED
-       AND EXISTS "${CLAW3D_LAYERING_CHECK_PS1}")
-        find_program(CLAW3D_POWERSHELL_EXECUTABLE NAMES powershell pwsh)
-        if(CLAW3D_POWERSHELL_EXECUTABLE)
-            add_custom_target(claw3d_layering_check
-                COMMAND "${CLAW3D_POWERSHELL_EXECUTABLE}"
-                        -NoProfile
-                        -ExecutionPolicy Bypass
-                        -File "${CLAW3D_LAYERING_CHECK_PS1}"
-                WORKING_DIRECTORY "${CLAW3D_ROOT}"
-                COMMENT "Checking src layering boundaries")
-            add_dependencies(${PROJECT_NAME} claw3d_layering_check)
-            set(CLAW3D_LAYERING_CHECK_ATTACHED ON)
-        endif()
-    endif()
-
-    if(NOT CLAW3D_LAYERING_CHECK_ATTACHED)
-        message(WARNING
-            "CLAW3D_ENABLE_LAYERING_CHECK=ON was requested, but no usable "
-            "tools/check_layering script was found. Continuing without the "
-            "src layering check.")
-    endif()
-endif()
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
     FOLDER "applications"
     NO_SYSTEM_FROM_IMPORTED ON)

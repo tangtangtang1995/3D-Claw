@@ -205,7 +205,8 @@ PlanarPatchRemeshingJobHandle start_planar_patch_remeshing_job(
     controller.begin(AlgorithmId::PlanarPatchRemeshing,
                      "Planar Patch Remeshing",
                      request.source_handle,
-                     ResultDisposition::HideSourceAndAddChild);
+                     ResultDisposition::HideSourceAndAddChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -243,6 +244,7 @@ PlanarPatchRemeshingJobHandle start_planar_patch_remeshing_job(
                 runner->set_error("unknown worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

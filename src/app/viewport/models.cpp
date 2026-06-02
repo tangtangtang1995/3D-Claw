@@ -8,7 +8,7 @@
 #include "viewport/viewport_canvas.h"
 
 #include "io/surface_mesh_io.h"
-#include "model/model_health.h"
+#include <model_health.h>
 #include "selection/selection_manager.h"
 #include "viewport/scene_lighting.h"
 

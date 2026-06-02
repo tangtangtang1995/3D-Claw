@@ -160,7 +160,8 @@ AcvdRemeshingJobHandle start_acvd_remeshing_job(
     controller.begin(AlgorithmId::AcvdRemeshing,
                      "ACVD Remeshing",
                      request.source_handle,
-                     ResultDisposition::HideSourceAndAddChild);
+                     ResultDisposition::HideSourceAndAddChild,
+                     AlgorithmCompletionPolicy::final_preview_hold());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -193,6 +194,7 @@ AcvdRemeshingJobHandle start_acvd_remeshing_job(
                 runner->set_error("unknown worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }

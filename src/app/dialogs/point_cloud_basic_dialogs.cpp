@@ -8,6 +8,7 @@
 #include "dialogs/basic_dialogs.h"
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
+#include "platform/window_events.h"
 #include "services/jobs/easy3d/easy3d_point_cloud_jobs.h"
 #include "ui/layout_helpers.h"
 #include "ui/status_widgets.h"
@@ -17,8 +18,6 @@
 #include <easy3d/core/point_cloud.h>
 #include <easy3d/renderer/renderer.h>
 #include <easy3d/util/logging.h>
-
-#include <GLFW/glfw3.h>
 
 void renderDialogPointCloudSimplify(ViewportCanvas* viewer, PointCloudSimplifyState& s, bool& open) {
     prepare_dialog_window(420, 220);
@@ -74,7 +73,7 @@ void renderDialogPointCloudNormalEstimation(ViewportCanvas* viewer, PointCloudNo
                 request.reorient = s.reorient;
                 request.normalize = s.normalize;
                 request.source_name = cloud->name();
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
                 if (!claw3d::services::start_point_cloud_normal_estimation_job(
                         win->algorithm_controller(), request)) {
                     LOG(WARNING) << "Failed to start point cloud normal estimation";

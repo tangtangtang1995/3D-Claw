@@ -7,7 +7,7 @@
 
 // Geodesic source/target, front propagation, and path overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 
@@ -25,7 +25,7 @@
 // Target : lime green sphere point   (Graph).
 // ============================================================================
 
-void MainWindow::update_geo_source_overlay(easy3d::SurfaceMesh* source,
+void OverlayController::update_geo_source_overlay(easy3d::SurfaceMesh* source,
     const std::vector<easy3d::vec3>& points)
 {
     if (interaction_overlay_.geodesic_sources &&
@@ -60,7 +60,7 @@ void MainWindow::update_geo_source_overlay(easy3d::SurfaceMesh* source,
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_geo_target_overlay(easy3d::SurfaceMesh* source,
+void OverlayController::update_geo_target_overlay(easy3d::SurfaceMesh* source,
                                                 const easy3d::vec3* p) {
     if (interaction_overlay_.geodesic_target &&
         !model_is_live(viewer_, interaction_overlay_.geodesic_target))
@@ -93,7 +93,7 @@ void MainWindow::update_geo_target_overlay(easy3d::SurfaceMesh* source,
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_geo_overlay() {
+void OverlayController::clear_geo_overlay() {
     delete_model_if_live(viewer_, interaction_overlay_.geodesic_sources);
     delete_model_if_live(viewer_, interaction_overlay_.geodesic_target);
     viewer_.mark_dirty();

@@ -1,6 +1,5 @@
 add_library(claw3d_geometry_algorithms STATIC
     include/icp.h
-    include/plane_analysis.h
     src/icp.cpp
 )
 

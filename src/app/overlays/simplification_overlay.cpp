@@ -7,7 +7,7 @@
 
 // CGAL Surface Mesh Simplification live-preview overlays.
 
-#include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "overlays/overlay_utils.h"
 #include "viewport/viewport_canvas.h"
 #include "viewport/scene_lighting.h"
@@ -33,7 +33,7 @@
 // clear: undo the source mesh restyling. Visibility is left to completion
 //        handler (which hides the source so the simplified child takes over).
 
-void MainWindow::init_simpl_overlay(easy3d::SurfaceMesh* src) {
+void OverlayController::init_simpl_overlay(easy3d::SurfaceMesh* src) {
     clear_simpl_overlay();
     if (!src) return;
     auto& state = algorithm_overlay_.simplification;
@@ -52,7 +52,7 @@ void MainWindow::init_simpl_overlay(easy3d::SurfaceMesh* src) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::update_simpl_overlay(
+void OverlayController::update_simpl_overlay(
     const std::vector<SimplTrailEntry>& new_entries)
 {
     auto& state = algorithm_overlay_.simplification;
@@ -119,7 +119,7 @@ void MainWindow::update_simpl_overlay(
 // every time the runner publishes a new snapshot generation. clear() empties
 // the mesh, then we re-add vertices + triangles; the renderer keeps the
 // drawables and just re-uploads the buffers.
-void MainWindow::update_simpl_snapshot_mesh(
+void OverlayController::update_simpl_snapshot_mesh(
     const std::vector<SIMPL_Point3d>& verts,
     const std::vector<SIMPL_Triangle>& tris,
     float face_opacity)
@@ -207,7 +207,7 @@ void MainWindow::update_simpl_snapshot_mesh(
     viewer_.mark_dirty();
 }
 
-void MainWindow::set_simpl_snapshot_opacity(float opacity) {
+void OverlayController::set_simpl_snapshot_opacity(float opacity) {
     (void)opacity;
     auto& state = algorithm_overlay_.simplification;
     if (!state.snapshot_mesh)
@@ -230,12 +230,12 @@ void MainWindow::set_simpl_snapshot_opacity(float opacity) {
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_simpl_snapshot_mesh() {
+void OverlayController::clear_simpl_snapshot_mesh() {
     delete_model_if_live(viewer_, algorithm_overlay_.simplification.snapshot_mesh);
     viewer_.mark_dirty();
 }
 
-void MainWindow::clear_simpl_overlay() {
+void OverlayController::clear_simpl_overlay() {
     auto& state = algorithm_overlay_.simplification;
     delete_model_if_live(viewer_, state.trail_graph);
     state.trail_buffer.clear();

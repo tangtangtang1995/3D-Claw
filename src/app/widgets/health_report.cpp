@@ -11,7 +11,7 @@
 #include "ai/ai_explainable_item.h"
 #include "ai/ai_language.h"
 #include "window/main_window.h"
-#include "model/model_health.h"
+#include <model_health.h>
 #include "ui/layout_helpers.h"
 #include "ui/status_widgets.h"
 #include "viewport/viewport_canvas.h"

@@ -14,6 +14,7 @@
 
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "services/operations/easy3d_model_operations.h"
@@ -121,7 +122,7 @@ void renderDialogMeasurement(ViewportCanvas* viewer, MainWindow* win,
     DIALOG_BODY("Measurement", open) {
         prereq_hint_only(prereq_any_model(viewer));
         if (s.overlay_dirty) {
-            win->update_measurement_overlay(s);
+            win->overlays().update_measurement_overlay(s);
             s.overlay_dirty = false;
         }
         const char* type_names[] = {"Distance", "Polyline", "Angle",
@@ -288,7 +289,7 @@ void renderDialogMeasurement(ViewportCanvas* viewer, MainWindow* win,
         if (any) {
             if (ImGui::Button("Clear All")) {
                 s.reset();
-                win->clear_measurement_overlay();
+                win->overlays().clear_measurement_overlay();
             }
         }
         if (s.picking && !s.points.empty()) {

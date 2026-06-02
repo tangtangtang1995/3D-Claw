@@ -9,9 +9,11 @@
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "common/primitive_preview_policy.h"
+#include "platform/window_events.h"
 #include "services/jobs/cgal/ransac_detection_job.h"
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "window/window_helpers.h"
 #include "ai/ai_chat.h"
 #include "ai/ai_context.h"
@@ -36,7 +38,6 @@
 #include <limits>
 #include <sstream>
 #include <vector>
-#include <GLFW/glfw3.h>
 
 // =============================================================================
 // RANSAC Primitive Extraction
@@ -252,13 +253,13 @@ void renderDialogRansac(ViewportCanvas* viewer, RansacState& s, bool& open) {
                 if (latest_candidate) break;  // candidate is enough
             }
             if (latest_candidate && win) {
-                win->update_ransac_samples_overlay(latest_candidate->sample_pts);
-                win->update_ransac_candidate_overlay(
+                win->overlays().update_ransac_samples_overlay(latest_candidate->sample_pts);
+                win->overlays().update_ransac_candidate_overlay(
                     latest_candidate->plane_eq,
                     latest_candidate->sample_pts,
                     bbox_diag);
             } else if (latest_sampling && win) {
-                win->update_ransac_samples_overlay(latest_sampling->sample_pts);
+                win->overlays().update_ransac_samples_overlay(latest_sampling->sample_pts);
             }
 
             for (const auto& ev : events) {
@@ -493,7 +494,7 @@ void renderDialogRansac(ViewportCanvas* viewer, RansacState& s, bool& open) {
         // so the drain doesn't keep firing on stale events.
         static bool prev_busy = false;
         if (prev_busy && !busy && win) {
-            win->clear_ransac_live_overlays();
+            win->overlays().clear_ransac_live_overlays();
         }
         prev_busy = busy;
 
@@ -531,6 +532,8 @@ void renderDialogRansac(ViewportCanvas* viewer, RansacState& s, bool& open) {
             claw_ui::same_line_if_fits_button("Cancel");
             if (ImGui::SmallButton("Cancel")) {
                 if (run) run.cancel();
+                if (win)
+                    win->algorithm_controller().request_cancel();
             }
         } else if (ImGui::Button("Detect Primitives")) {
             if (!win) { /* skip */ } else {
@@ -541,7 +544,7 @@ void renderDialogRansac(ViewportCanvas* viewer, RansacState& s, bool& open) {
                 // Reset live-preview pipeline
                 s.live_shapes_added = 0;
                 s.runner.reset();
-                if (win) win->clear_ransac_live_overlays();
+                if (win) win->overlays().clear_ransac_live_overlays();
 
                 float eps = s.epsilon, nth = s.normal_threshold;
                 float ceps = s.cluster_epsilon; int mp = s.min_points;
@@ -553,7 +556,7 @@ void renderDialogRansac(ViewportCanvas* viewer, RansacState& s, bool& open) {
                         ? win->viewer()->model_handle(cloud)
                         : ModelHandle{};
                 request.config = cfg;
-                request.wake_ui = []() { glfwPostEmptyEvent(); };
+                request.wake_ui = []() { claw3d::app::wake_event_loop(); };
 
                 auto runner = claw3d::services::start_ransac_detection_job(
                     win->algorithm_controller(), request);

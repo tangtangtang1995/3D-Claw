@@ -22,6 +22,7 @@
 
 #include "viewport/viewport_canvas.h"
 #include "window/main_window.h"
+#include "overlays/overlay_controller.h"
 #include "dialogs/scope.h"
 #include "dialogs/prerequisites.h"
 #include "ai/ai_context.h"
@@ -376,7 +377,7 @@ void renderDialogCrop(ViewportCanvas* viewer, MainWindow* win,
     DIALOG_BODY("Crop / Clip", open) {
         prereq_hint_only(prereq_any_model(viewer));
         if (s.gizmo_dirty) {
-            win->update_crop_overlay(s);
+            win->overlays().update_crop_overlay(s);
             s.gizmo_dirty = false;
         }
         auto* model = viewer->current_model();
@@ -398,9 +399,9 @@ void renderDialogCrop(ViewportCanvas* viewer, MainWindow* win,
             s.set_plane_from_bbox(model->bounding_box());
             s.box_initialized = true;
             if (s.mode == CropMode::Selection)
-                win->clear_crop_overlay();
+                win->overlays().clear_crop_overlay();
             else
-                win->update_crop_overlay(s);
+                win->overlays().update_crop_overlay(s);
         }
 
         const char* modes[] = {"Box (AABB / OBB)", "Plane XY (z=const)", "Plane YZ (x=const)",
@@ -413,9 +414,9 @@ void renderDialogCrop(ViewportCanvas* viewer, MainWindow* win,
                 if (!s.box_initialized) { s.set_box_from_bb(model->bounding_box()); s.box_initialized = true; }
                 s.set_plane_from_bbox(model->bounding_box());
                 if (s.mode == CropMode::Selection)
-                    win->clear_crop_overlay();
+                    win->overlays().clear_crop_overlay();
                 else
-                    win->update_crop_overlay(s);
+                    win->overlays().update_crop_overlay(s);
             }
         }
 
@@ -481,7 +482,7 @@ void renderDialogCrop(ViewportCanvas* viewer, MainWindow* win,
         }
 
         if (nums_changed && s.mode != CropMode::Selection)
-            win->update_crop_overlay(s);
+            win->overlays().update_crop_overlay(s);
 
         ImGui::Separator();
         bool can_apply = s.mode != CropMode::Selection || win->has_current_selection();
@@ -531,7 +532,7 @@ void renderDialogCrop(ViewportCanvas* viewer, MainWindow* win,
                 LOG(WARNING) << "crop result is empty; not added to scene";
             } else {
                 publish_result(model, result, suffix, viewer);
-                win->save_crop_artifact(s, model, suffix);
+                win->overlays().save_crop_artifact(s, model, suffix);
                 std::ostringstream ss;
                 ss << "Crop result added.\n"
                    << "Source: " << model->name() << "\n"

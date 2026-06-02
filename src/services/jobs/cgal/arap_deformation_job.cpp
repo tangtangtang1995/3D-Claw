@@ -171,7 +171,8 @@ ArapDeformationJobHandle start_arap_deformation_job(
     controller.begin(AlgorithmId::ArapDeformation,
                      "ARAP Deformation",
                      request.source_handle,
-                     ResultDisposition::AddAsChild);
+                     ResultDisposition::AddAsChild,
+                     AlgorithmCompletionPolicy::preview_flush());
 
     controller.start_worker(std::thread(
         [&controller,
@@ -204,6 +205,7 @@ ArapDeformationJobHandle start_arap_deformation_job(
                                   "unknown worker exception");
             }
 
+            controller.mark_worker_finished();
             if (final_result_ready) {
                 final_result_ready->store(true, std::memory_order_release);
             }
